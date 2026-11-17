@@ -147,8 +147,12 @@ def chart_horizontal_bar_drivers():
 
 
 def chart_pie_item_types():
-    """Pie chart — item type share from orders."""
-    counts = Counter(_item_type_name(o["item_id"]) for o in orders)
+    """Pie chart — item type share from order line items."""
+    type_names = []
+    for o in orders:
+        for oi in o.get("order_items") or []:
+            type_names.append(_item_type_name(oi["item_id"]))
+    counts = Counter(type_names)
     labels = list(counts.keys())
     values = list(counts.values())
 
@@ -220,7 +224,7 @@ def chart_area_monthly_revenue():
     ax.fill_between(labels, values, alpha=0.5, color=COLORS[2])
     ax.plot(labels, values, color=COLORS[0], linewidth=2)
     ax.set_title("Monthly Revenue (Area Chart)")
-    ax.set_ylabel("Revenue ($)")
+    ax.set_ylabel("Revenue (IQD)")
     fig.tight_layout()
     return {
         "title": "Area Chart — Monthly Revenue",
@@ -236,7 +240,7 @@ def chart_histogram_order_values():
     fig, ax = plt.subplots(figsize=(7, 4))
     ax.hist(values, bins=10, color=COLORS[0], edgecolor="white")
     ax.set_title("Order Value Distribution (Histogram)")
-    ax.set_xlabel("Order Value ($)")
+    ax.set_xlabel("Order Value (IQD)")
     ax.set_ylabel("Frequency")
     fig.tight_layout()
     return {
@@ -277,7 +281,7 @@ def chart_scatter_trend():
     ax.plot(xs, p(xs), color=COLORS[0], linewidth=2, label="Trend line")
     ax.set_title("Merchant Orders vs Revenue (Scatter + Trend)")
     ax.set_xlabel("Total Orders")
-    ax.set_ylabel("Revenue ($)")
+    ax.set_ylabel("Revenue (IQD)")
     ax.legend()
     fig.tight_layout()
     return {
@@ -300,7 +304,7 @@ def chart_bubble_merchants():
         ax.annotate(label, (x[i], y[i]), fontsize=7, ha="center")
     ax.set_title("Merchants Bubble (Orders × Revenue × Size)")
     ax.set_xlabel("Total Orders")
-    ax.set_ylabel("Revenue ($)")
+    ax.set_ylabel("Revenue (IQD)")
     fig.tight_layout()
     return {
         "title": "Bubble Chart — Merchants",
@@ -319,7 +323,7 @@ def chart_box_by_province():
     fig, ax = plt.subplots(figsize=(7, 4))
     sns.boxplot(data=df, x="province", y="total_price", hue="province", ax=ax, palette="viridis", legend=False)
     ax.set_title("Order Value by Province (Box Plot)")
-    ax.set_ylabel("Order Value ($)")
+    ax.set_ylabel("Order Value (IQD)")
     ax.tick_params(axis="x", rotation=20)
     fig.tight_layout()
     return {
@@ -351,14 +355,13 @@ def chart_violin_delivery_days():
 
 
 def chart_heatmap_correlation():
-    """Heatmap — correlation of numeric order/driver-related fields."""
+    """Heatmap — correlation of numeric order fields (IQD totals)."""
     df = pd.DataFrame([
         {
-            "quantity": o["quantity"],
+            "line_count": len(o.get("order_items") or []),
+            "total_qty": sum(oi["quantity"] for oi in (o.get("order_items") or [])),
             "total_price": o["total_price"],
             "delivery_days": o["delivery_days"],
-            "item_price": next(i["price"] for i in items if i["id"] == o["item_id"]),
-            "item_weight": next(i["weight_kg"] for i in items if i["id"] == o["item_id"]),
         }
         for o in orders
     ])
@@ -398,7 +401,7 @@ def chart_kde_order_values():
     fig, ax = plt.subplots(figsize=(7, 4))
     sns.kdeplot(values, fill=True, color=COLORS[0], ax=ax)
     ax.set_title("Order Value Density (KDE)")
-    ax.set_xlabel("Order Value ($)")
+    ax.set_xlabel("Order Value (IQD)")
     fig.tight_layout()
     return {
         "title": "Density Plot (KDE) — Order Values",
@@ -451,25 +454,69 @@ def chart_radar_provinces():
     }
 
 
-def build_all_charts():
-    """Return all lecture charts for the dashboard."""
-    _load_active()
+# Ordered list of builders — dashboard buttons pick one index at a time.
+CHART_BUILDERS = [
+    chart_bar_orders_by_city,
+    chart_grouped_bar_posts,
+    chart_horizontal_bar_drivers,
+    chart_pie_item_types,
+    chart_donut_status,
+    chart_line_orders_over_time,
+    chart_area_monthly_revenue,
+    chart_histogram_order_values,
+    chart_scatter_drivers,
+    chart_scatter_trend,
+    chart_bubble_merchants,
+    chart_box_by_province,
+    chart_violin_delivery_days,
+    chart_heatmap_correlation,
+    chart_count_plot_status,
+    chart_kde_order_values,
+    chart_radar_provinces,
+]
+
+# Short labels for the dashboard button strip (titles alone are long).
+CHART_BUTTON_LABELS = [
+    "Bar — Cities",
+    "Grouped Bar — Posts",
+    "H-Bar — Drivers",
+    "Pie — Item Types",
+    "Donut — Status",
+    "Line — Time",
+    "Area — Revenue",
+    "Histogram",
+    "Scatter — Drivers",
+    "Scatter + Trend",
+    "Bubble — Merchants",
+    "Box — Provinces",
+    "Violin — Cities",
+    "Heatmap",
+    "Count — Status",
+    "KDE Density",
+    "Radar — Provinces",
+]
+
+
+def get_chart_catalog():
+    """Titles/labels only — no image rendering (keeps dashboard load fast)."""
     return [
-        chart_bar_orders_by_city(),
-        chart_grouped_bar_posts(),
-        chart_horizontal_bar_drivers(),
-        chart_pie_item_types(),
-        chart_donut_status(),
-        chart_line_orders_over_time(),
-        chart_area_monthly_revenue(),
-        chart_histogram_order_values(),
-        chart_scatter_drivers(),
-        chart_scatter_trend(),
-        chart_bubble_merchants(),
-        chart_box_by_province(),
-        chart_violin_delivery_days(),
-        chart_heatmap_correlation(),
-        chart_count_plot_status(),
-        chart_kde_order_values(),
-        chart_radar_provinces(),
+        {"id": i, "label": CHART_BUTTON_LABELS[i], "title": CHART_BUTTON_LABELS[i]}
+        for i in range(len(CHART_BUILDERS))
     ]
+
+
+def build_chart_by_id(chart_id: int):
+    """Render a single chart by index (used when the user clicks a button)."""
+    if chart_id < 0 or chart_id >= len(CHART_BUILDERS):
+        return None
+    _load_active()
+    chart = CHART_BUILDERS[chart_id]()
+    chart["id"] = chart_id
+    chart["label"] = CHART_BUTTON_LABELS[chart_id]
+    return chart
+
+
+def build_all_charts():
+    """Render every chart (kept for scripts / debugging)."""
+    _load_active()
+    return [fn() for fn in CHART_BUILDERS]

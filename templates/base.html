@@ -21,18 +21,23 @@
 </head>
 <body class="h-full bg-slate-100 text-slate-800">
   <div class="flex min-h-screen">
-    <aside id="sidebar" class="sticky top-0 h-screen bg-brand-dark text-white transition-all duration-300 flex flex-col w-60 shrink-0 overflow-hidden">
-      <div class="flex items-center gap-3 px-4 py-4 border-b border-white/10">
-        <div class="w-9 h-9 rounded-lg bg-brand grid place-items-center shrink-0">
+    {# data-collapsed is the source of truth for open/closed (see static/js/app.js) #}
+    <aside id="sidebar" data-collapsed="0"
+           class="sticky top-0 h-screen bg-brand-dark text-white transition-all duration-300 flex flex-col w-60 shrink-0 overflow-hidden">
+      <div class="flex items-center gap-2 px-3 py-4 border-b border-white/10 min-h-[68px]">
+        <div class="sidebar-brand w-9 h-9 rounded-lg bg-brand grid place-items-center shrink-0">
           <i data-lucide="mail" class="w-5 h-5"></i>
         </div>
-        <div class="sidebar-label overflow-hidden whitespace-nowrap">
+        <div class="sidebar-label overflow-hidden whitespace-nowrap min-w-0 flex-1">
           <div class="font-semibold text-sm">Postal System</div>
           <div class="text-xs text-teal-200/80">Data Analysis</div>
         </div>
-        <button id="sidebar-toggle" type="button" class="ml-auto p-1.5 rounded hover:bg-white/10" title="Collapse sidebar">
-          <i data-lucide="panel-left-close" class="w-4 h-4 sidebar-open-icon"></i>
-          <i data-lucide="panel-left-open" class="w-4 h-4 sidebar-closed-icon hidden"></i>
+        {# Toggle stays visible even when collapsed (fixed size, never clipped away) #}
+        <button id="sidebar-toggle" type="button"
+                class="shrink-0 p-2 rounded-lg hover:bg-white/10"
+                title="Toggle sidebar"
+                aria-label="Toggle sidebar">
+          <i data-lucide="panel-left-close" class="w-4 h-4" id="sidebar-toggle-icon"></i>
         </button>
       </div>
 
@@ -52,7 +57,8 @@
         <p class="sidebar-label px-3 pt-4 pb-1 text-[10px] uppercase tracking-wider text-teal-300/70">Tables</p>
         {% for key, info in tables.items() %}
         <a href="{{ url_for('table_page', name=key) }}"
-           class="flex items-center gap-3 px-3 py-2 rounded-lg {% if active == key %}bg-brand{% else %}hover:bg-white/10{% endif %}">
+           class="flex items-center gap-3 px-3 py-2 rounded-lg {% if active == key %}bg-brand{% else %}hover:bg-white/10{% endif %}"
+           title="{{ info.title }}">
           <i data-lucide="table-2" class="w-4 h-4 shrink-0"></i>
           <span class="sidebar-label truncate">{{ info.title }}</span>
         </a>

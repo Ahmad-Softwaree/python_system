@@ -17,7 +17,7 @@ class Config:
     MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
     MYSQL_USER = os.getenv("MYSQL_USER", "root")
     MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "mysql")
-    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "postal_system")
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "python_postal")
 
     # SQLAlchemy connection URL.
     # "mysql+pymysql://" means: MySQL database, using the PyMySQL driver.

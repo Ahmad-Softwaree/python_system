@@ -1,11 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ title }} — Postal System{% endblock %}
 
-{#
-  One template for BOTH modes:
-  - deleted_mode=False → Add / Edit / soft-Delete
-  - deleted_mode=True  → Restore only (+ deleted_at column)
-#}
 {% block content %}
 <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
   <div>
@@ -26,26 +21,27 @@
   </div>
 </header>
 
-<form method="get" class="mb-4 flex gap-2">
+<div class="mb-4 flex gap-2 items-center">
   <div class="relative flex-1 max-w-md">
     <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-    <input type="search" name="q" value="{{ q }}" placeholder="Search by name, code, phone..."
+    <input id="live-search" type="search" name="q" value="{{ q }}"
+           placeholder="Type to search (waits 1 second)..."
+           autocomplete="off"
            class="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand/40" />
   </div>
-  <button type="submit" class="px-4 py-2 rounded-lg bg-brand-dark text-white text-sm hover:bg-slate-800">Search</button>
   {% if q %}
   <a href="{{ url_for('deleted_table' if deleted_mode else 'table_page', name=table_name) }}"
      class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm">Clear</a>
   {% endif %}
-</form>
+</div>
 
 <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
   <div class="overflow-x-auto">
     <table class="min-w-full text-sm">
       <thead class="bg-brand-soft text-brand-dark">
         <tr>
-          {% for col in columns %}
-          <th class="text-left px-3 py-2.5 font-semibold whitespace-nowrap">{{ col.replace('_', ' ').title() }}</th>
+          {% for col in view_columns %}
+          <th class="text-left px-3 py-2.5 font-semibold whitespace-nowrap">{{ col.label }}</th>
           {% endfor %}
           <th class="text-right px-3 py-2.5 font-semibold">Actions</th>
         </tr>
@@ -53,30 +49,55 @@
       <tbody>
         {% if rows %}
           {% for row in rows %}
-          <tr class="border-t border-slate-100 hover:bg-slate-50">
-            {% for col in columns %}
-            <td class="px-3 py-2 whitespace-nowrap">{{ row[col] }}</td>
+          <tr class="border-t border-slate-100 hover:bg-slate-50 {% if row_link == 'stock_history' and not deleted_mode %}cursor-pointer{% endif %}"
+              {% if row_link == 'stock_history' and not deleted_mode %}
+              onclick="if(!event.target.closest('button,a,form')) location.href='{{ url_for('stock_history', item_id=row.id) }}'"
+              {% endif %}>
+            {% for col in view_columns %}
+            <td class="px-3 py-2 whitespace-nowrap align-top">
+              {% if col.key == 'status' and special == 'orders' and not deleted_mode %}
+                <div class="flex flex-wrap gap-1" onclick="event.stopPropagation()">
+                  {% for st in order_statuses %}
+                  <form method="post" action="{{ url_for('order_status', row_id=row.id, q=q, page=pager.page) }}" class="inline">
+                    <input type="hidden" name="status" value="{{ st }}" />
+                    <button type="submit"
+                            class="px-2 py-0.5 rounded text-[11px] border
+                            {% if row.status == st %}bg-brand text-white border-brand{% else %}bg-white text-slate-600 border-slate-200 hover:border-brand{% endif %}">
+                      {{ st }}
+                    </button>
+                  </form>
+                  {% endfor %}
+                </div>
+              {% else %}
+                {{ row[col.key] }}
+              {% endif %}
+            </td>
             {% endfor %}
-            <td class="px-3 py-2">
+            <td class="px-3 py-2" onclick="event.stopPropagation()">
               <div class="flex items-center justify-end gap-1">
                 {% if deleted_mode %}
-                <form method="post" action="{{ url_for('table_restore', name=table_name, row_id=row.id, q=q, page=pager.page) }}">
-                  <button type="submit" title="Restore" class="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-50">
-                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                  </button>
-                </form>
+                <button type="button" title="Restore"
+                        class="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-50 btn-confirm"
+                        data-action="{{ url_for('table_restore', name=table_name, row_id=row.id, q=q, page=pager.page) }}"
+                        data-title="Restore record?"
+                        data-message="Restore #{{ row.id }} back to the active list?"
+                        data-confirm-label="Restore">
+                  <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                </button>
                 {% else %}
                 <button type="button" title="Edit"
                         class="p-1.5 rounded-lg text-sky-700 hover:bg-sky-50 btn-edit"
-                        data-row='{{ row|tojson }}'>
+                        data-row='{{ row._raw|tojson }}'>
                   <i data-lucide="pencil" class="w-4 h-4"></i>
                 </button>
-                <form method="post" action="{{ url_for('table_delete', name=table_name, row_id=row.id, q=q, page=pager.page) }}"
-                      onsubmit="return confirm('Soft-delete this record?')">
-                  <button type="submit" title="Delete" class="p-1.5 rounded-lg text-red-600 hover:bg-red-50">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                  </button>
-                </form>
+                <button type="button" title="Delete"
+                        class="p-1.5 rounded-lg text-red-600 hover:bg-red-50 btn-confirm"
+                        data-action="{{ url_for('table_delete', name=table_name, row_id=row.id, q=q, page=pager.page) }}"
+                        data-title="Delete record?"
+                        data-message="Soft-delete #{{ row.id }}? You can restore it later from Deleted."
+                        data-confirm-label="Delete">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
                 {% endif %}
               </div>
             </td>
@@ -84,7 +105,7 @@
           {% endfor %}
         {% else %}
           <tr>
-            <td colspan="{{ columns|length + 1 }}" class="px-3 py-10 text-center text-brand-muted">No records found.</td>
+            <td colspan="{{ view_columns|length + 1 }}" class="px-3 py-10 text-center text-brand-muted">No records found.</td>
           </tr>
         {% endif %}
       </tbody>
@@ -92,10 +113,10 @@
   </div>
 
   <div class="flex items-center justify-between gap-3 px-4 py-3 border-t border-slate-100 bg-slate-50">
-    <span class="text-xs text-brand-muted">Page {{ pager.page }} of {{ pager.pages }}</span>
+    <span class="text-xs text-brand-muted">Page {{ pager.page }} of {{ pager.pages }}{% if q %} · search “{{ q }}”{% endif %}</span>
     <div class="flex items-center gap-2">
       {% if pager.has_prev %}
-      <a href="{{ pager.prev_url }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm hover:bg-white">
+      <a href="{{ pager.prev_url }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50">
         <i data-lucide="chevron-left" class="w-4 h-4"></i> Prev
       </a>
       {% else %}
@@ -103,9 +124,8 @@
         <i data-lucide="chevron-left" class="w-4 h-4"></i> Prev
       </span>
       {% endif %}
-
       {% if pager.has_next %}
-      <a href="{{ pager.next_url }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm hover:bg-white">
+      <a href="{{ pager.next_url }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50">
         Next <i data-lucide="chevron-right" class="w-4 h-4"></i>
       </a>
       {% else %}
@@ -117,12 +137,24 @@
   </div>
 </div>
 
+{# Confirm modal (delete / restore) — no browser alert() #}
+<div id="confirm-modal" class="hidden fixed inset-0 z-[60]">
+  <div class="absolute inset-0 bg-black/40" data-close-confirm></div>
+  <div class="relative mx-auto mt-28 w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-5">
+    <h2 id="confirm-title" class="font-semibold text-brand-dark text-lg">Confirm</h2>
+    <p id="confirm-message" class="text-sm text-brand-muted mt-2"></p>
+    <form id="confirm-form" method="post" class="flex justify-end gap-2 mt-5">
+      <button type="button" data-close-confirm class="px-4 py-2 rounded-lg border border-slate-300 text-sm">Cancel</button>
+      <button type="submit" id="confirm-submit" class="px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium">Confirm</button>
+    </form>
+  </div>
+</div>
+
 {% if not deleted_mode %}
-<!-- Create / Edit Modal -->
 <div id="record-modal" class="hidden fixed inset-0 z-50">
   <div class="absolute inset-0 bg-black/40" data-close-modal></div>
-  <div class="relative mx-auto mt-16 w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 max-h-[80vh] overflow-y-auto">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+  <div class="relative mx-auto mt-10 w-full max-w-xl bg-white rounded-2xl shadow-xl border border-slate-200 max-h-[85vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 sticky top-0 bg-white">
       <h2 id="modal-title" class="font-semibold text-brand-dark">Add record</h2>
       <button type="button" data-close-modal class="p-1.5 rounded hover:bg-slate-100">
         <i data-lucide="x" class="w-4 h-4"></i>
@@ -137,6 +169,14 @@
           <input type="checkbox" name="{{ field.name }}" id="field-{{ field.name }}" class="rounded border-slate-300" />
           Active / Yes
         </label>
+        {% elif field.type == 'relation' %}
+        {# Searchable combobox: type to filter, click to select id #}
+        <div class="combobox relative" data-source="{{ field.source }}" data-name="{{ field.name }}">
+          <input type="hidden" name="{{ field.name }}" id="field-{{ field.name }}" {% if field.required %}required{% endif %} />
+          <input type="text" class="combobox-input w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40"
+                 placeholder="Type to search {{ field.label|lower }}..." autocomplete="off" />
+          <div class="combobox-menu hidden absolute z-10 left-0 right-0 mt-1 max-h-48 overflow-auto bg-white border border-slate-200 rounded-lg shadow-lg"></div>
+        </div>
         {% elif field.type == 'date' %}
         <input type="date" name="{{ field.name }}" id="field-{{ field.name }}"
                {% if field.required %}required{% endif %}
@@ -152,6 +192,18 @@
         {% endif %}
       </div>
       {% endfor %}
+
+      {% if special == 'orders' %}
+      <div class="border-t border-slate-100 pt-3 mt-2">
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-medium text-slate-600">Order items</label>
+          <button type="button" id="add-order-line" class="text-xs px-2 py-1 rounded bg-brand-soft text-brand font-medium">+ Add item</button>
+        </div>
+        <div id="order-lines" class="space-y-2"></div>
+        <p class="text-[11px] text-brand-muted mt-2">Each line: search an item + quantity. Stock is subtracted when the order is saved.</p>
+      </div>
+      {% endif %}
+
       <div class="flex justify-end gap-2 pt-2">
         <button type="button" data-close-modal class="px-4 py-2 rounded-lg border border-slate-300 text-sm">Cancel</button>
         <button type="submit" class="px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium">Save</button>
@@ -163,12 +215,16 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/search.js') }}"></script>
+<script src="{{ url_for('static', filename='js/confirm.js') }}"></script>
 {% if not deleted_mode %}
 <script>
   window.TABLE_CREATE_URL = {{ url_for('table_create', name=table_name)|tojson }};
   window.TABLE_UPDATE_URL = {{ url_for('table_update', name=table_name, row_id=0)|tojson }};
   window.TABLE_FIELDS = {{ fields|tojson }};
+  window.TABLE_SPECIAL = {{ special|tojson }};
 </script>
+<script src="{{ url_for('static', filename='js/combobox.js') }}"></script>
 <script src="{{ url_for('static', filename='js/table.js') }}"></script>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Stock History — {{ item.name }}{% endblock %}
+
+{% block content %}
+<header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
+  <div>
+    <h1 class="text-2xl font-bold text-brand-dark">Stock History</h1>
+    <p class="text-sm text-brand-muted">
+      {{ item.name }} · current stock: <strong>{{ item.stock }}</strong> · price: {{ format_iqd(item.price) }}
+    </p>
+  </div>
+  <a href="{{ url_for('table_page', name='items') }}" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50">
+    <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Items
+  </a>
+</header>
+
+<div class="mb-4 flex gap-2 items-center">
+  <div class="relative flex-1 max-w-md">
+    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+    <input id="live-search" type="search" value="{{ q }}" placeholder="Search reason / note (1s debounce)..."
+           autocomplete="off"
+           class="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand/40" />
+  </div>
+</div>
+
+<div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-brand-soft text-brand-dark">
+        <tr>
+          <th class="text-left px-3 py-2.5">ID</th>
+          <th class="text-left px-3 py-2.5">When</th>
+          <th class="text-left px-3 py-2.5">Change</th>
+          <th class="text-left px-3 py-2.5">Before</th>
+          <th class="text-left px-3 py-2.5">After</th>
+          <th class="text-left px-3 py-2.5">Reason</th>
+          <th class="text-left px-3 py-2.5">Order</th>
+          <th class="text-left px-3 py-2.5">Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if rows %}
+          {% for row in rows %}
+          <tr class="border-t border-slate-100">
+            <td class="px-3 py-2">{{ row.id }}</td>
+            <td class="px-3 py-2 whitespace-nowrap">{{ row.created_at }}</td>
+            <td class="px-3 py-2 {% if row.change_qty < 0 %}text-red-600{% else %}text-emerald-700{% endif %} font-medium">
+              {{ row.change_qty }}
+            </td>
+            <td class="px-3 py-2">{{ row.stock_before }}</td>
+            <td class="px-3 py-2">{{ row.stock_after }}</td>
+            <td class="px-3 py-2">{{ row.reason }}</td>
+            <td class="px-3 py-2">{{ row.order_id or '—' }}</td>
+            <td class="px-3 py-2">{{ row.note }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="8" class="px-3 py-10 text-center text-brand-muted">No history yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  <div class="flex items-center justify-between gap-3 px-4 py-3 border-t border-slate-100 bg-slate-50">
+    <span class="text-xs text-brand-muted">Page {{ pager.page }} of {{ pager.pages }} · {{ total }} rows</span>
+    <div class="flex items-center gap-2">
+      {% if pager.has_prev %}
+      <a href="{{ pager.prev_url }}" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm">← Prev</a>
+      {% endif %}
+      {% if pager.has_next %}
+      <a href="{{ pager.next_url }}" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm">Next →</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/search.js') }}"></script>
+{% endblock %}

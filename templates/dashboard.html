@@ -4,14 +4,14 @@
 {% block content %}
 <header class="mb-6">
   <h1 class="text-2xl font-bold text-brand-dark">Postal Analytics Dashboard</h1>
-  <p class="text-brand-muted text-sm mt-1">Charts from the Data Analysis lecture using live MySQL data.</p>
+  <p class="text-brand-muted text-sm mt-1">Click a chart button to load it one at a time from live MySQL data. Prices are in IQD.</p>
 </header>
 
 <section class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
   {% set cards = [
     (stats.orders, 'Orders'),
     (stats.delivered, 'Delivered'),
-    ('$' ~ '{:,.0f}'.format(stats.revenue), 'Revenue'),
+    (stats.revenue, 'Revenue'),
     (stats.drivers, 'Drivers'),
     (stats.merchants, 'Merchants'),
     (stats.posts, 'Posts')
@@ -24,13 +24,28 @@
   {% endfor %}
 </section>
 
-<section class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-  {% for chart in charts %}
-  <article class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-    <h2 class="font-semibold text-brand-dark">{{ chart.title }}</h2>
-    <p class="text-xs text-brand-muted mb-3">{{ chart.lecture }}</p>
-    <img src="data:image/png;base64,{{ chart.image }}" alt="{{ chart.title }}" class="w-full rounded-lg bg-brand-soft" />
-  </article>
-  {% endfor %}
+<section class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 md:p-5">
+  <h2 class="font-semibold text-brand-dark mb-3">Charts</h2>
+  <div class="flex flex-wrap gap-2 mb-5">
+    {% for chart in chart_catalog %}
+    <button type="button" data-chart-id="{{ chart.id }}"
+            class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-brand-dark text-xs md:text-sm hover:border-brand transition">
+      {{ chart.label }}
+    </button>
+    {% endfor %}
+  </div>
+  <div class="min-h-[320px] rounded-xl bg-brand-soft/40 border border-slate-100 p-4">
+    <div class="mb-3">
+      <h3 id="chart-title" class="font-semibold text-brand-dark">Select a chart</h3>
+      <p id="chart-lecture" class="text-xs text-brand-muted mt-1">Choose a button above to render one chart.</p>
+    </div>
+    <div id="chart-loading" class="hidden py-16 text-center text-brand-muted text-sm">Rendering chart…</div>
+    <p id="chart-empty" class="hidden py-16 text-center text-brand-muted text-sm">No chart to show.</p>
+    <img id="chart-image" alt="Chart" class="hidden w-full max-w-3xl mx-auto rounded-lg bg-white" />
+  </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}
