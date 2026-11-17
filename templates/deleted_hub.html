@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Deleted — Postal System{% endblock %}
+
+{% block content %}
+<header class="mb-6">
+  <h1 class="text-2xl font-bold text-brand-dark">Deleted Records</h1>
+  <p class="text-brand-muted text-sm mt-1">Open a table to search and restore soft-deleted rows.</p>
+</header>
+
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+  {% for key, info in tables.items() %}
+  <a href="{{ url_for('deleted_table', name=key) }}"
+     class="group bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-brand hover:shadow-md transition">
+    <div class="flex items-start justify-between gap-3">
+      <div class="w-10 h-10 rounded-lg bg-red-50 text-red-600 grid place-items-center group-hover:bg-brand group-hover:text-white transition">
+        <i data-lucide="trash-2" class="w-5 h-5"></i>
+      </div>
+      <span class="text-2xl font-bold text-brand-dark">{{ counts.get(key, 0) }}</span>
+    </div>
+    <h2 class="mt-4 font-semibold text-brand-dark">{{ info.title }}</h2>
+    <p class="text-xs text-brand-muted mt-1">View deleted {{ info.title|lower }}</p>
+  </a>
+  {% endfor %}
+</section>
+{% endblock %}

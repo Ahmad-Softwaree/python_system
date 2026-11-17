@@ -1,0 +1,17 @@
+streets = [
+    {"id": 1, "name": "100 Meter Street", "city_id": 1, "postal_code": "44001"},
+    {"id": 2, "name": "Gulan Street", "city_id": 1, "postal_code": "44002"},
+    {"id": 3, "name": "Ankawa Road", "city_id": 1, "postal_code": "44003"},
+    {"id": 4, "name": "Shaqlawa Main", "city_id": 2, "postal_code": "44101"},
+    {"id": 5, "name": "Koya Center", "city_id": 3, "postal_code": "44201"},
+    {"id": 6, "name": "Salim Street", "city_id": 4, "postal_code": "46001"},
+    {"id": 7, "name": "Malik Mahmud Circle", "city_id": 4, "postal_code": "46002"},
+    {"id": 8, "name": "Ranya Market", "city_id": 5, "postal_code": "46101"},
+    {"id": 9, "name": "Halabja Main", "city_id": 6, "postal_code": "46201"},
+    {"id": 10, "name": "Nizarke Street", "city_id": 7, "postal_code": "42001"},
+    {"id": 11, "name": "Duhok Corniche", "city_id": 7, "postal_code": "42002"},
+    {"id": 12, "name": "Zakho Bridge Road", "city_id": 8, "postal_code": "42101"},
+    {"id": 13, "name": "Amedi Mountain Rd", "city_id": 9, "postal_code": "42201"},
+    {"id": 14, "name": "Kirkuk Baghdad Rd", "city_id": 10, "postal_code": "36001"},
+    {"id": 15, "name": "Kirkuk Center", "city_id": 10, "postal_code": "36002"},
+]

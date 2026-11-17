@@ -1,0 +1,16 @@
+posts = [
+    {"id": 1, "name": "Erbil Central Post", "city_id": 1, "street_id": 1, "capacity": 500, "staff_count": 25},
+    {"id": 2, "name": "Erbil Ankawa Post", "city_id": 1, "street_id": 3, "capacity": 200, "staff_count": 12},
+    {"id": 3, "name": "Shaqlawa Post", "city_id": 2, "street_id": 4, "capacity": 80, "staff_count": 5},
+    {"id": 4, "name": "Koya Post", "city_id": 3, "street_id": 5, "capacity": 100, "staff_count": 6},
+    {"id": 5, "name": "Sulaymaniyah Central", "city_id": 4, "street_id": 6, "capacity": 450, "staff_count": 22},
+    {"id": 6, "name": "Sulaymaniyah East", "city_id": 4, "street_id": 7, "capacity": 180, "staff_count": 10},
+    {"id": 7, "name": "Ranya Post", "city_id": 5, "street_id": 8, "capacity": 90, "staff_count": 5},
+    {"id": 8, "name": "Halabja Post", "city_id": 6, "street_id": 9, "capacity": 120, "staff_count": 7},
+    {"id": 9, "name": "Duhok Central Post", "city_id": 7, "street_id": 10, "capacity": 350, "staff_count": 18},
+    {"id": 10, "name": "Duhok Corniche Post", "city_id": 7, "street_id": 11, "capacity": 150, "staff_count": 8},
+    {"id": 11, "name": "Zakho Post", "city_id": 8, "street_id": 12, "capacity": 160, "staff_count": 9},
+    {"id": 12, "name": "Amedi Post", "city_id": 9, "street_id": 13, "capacity": 50, "staff_count": 3},
+    {"id": 13, "name": "Kirkuk Central Post", "city_id": 10, "street_id": 14, "capacity": 300, "staff_count": 15},
+    {"id": 14, "name": "Kirkuk City Post", "city_id": 10, "street_id": 15, "capacity": 140, "staff_count": 8},
+]

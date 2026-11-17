@@ -1,0 +1,17 @@
+drivers = [
+    {"id": 1, "name": "Karwan Ali", "phone": "07501110001", "post_id": 1, "vehicle_type": "Van", "deliveries": 320, "rating": 4.8, "years_experience": 5},
+    {"id": 2, "name": "Rebin Hassan", "phone": "07501110002", "post_id": 1, "vehicle_type": "Motorcycle", "deliveries": 410, "rating": 4.5, "years_experience": 3},
+    {"id": 3, "name": "Diyar Omar", "phone": "07501110003", "post_id": 2, "vehicle_type": "Van", "deliveries": 180, "rating": 4.2, "years_experience": 2},
+    {"id": 4, "name": "Shwan Mustafa", "phone": "07501110004", "post_id": 5, "vehicle_type": "Truck", "deliveries": 290, "rating": 4.9, "years_experience": 7},
+    {"id": 5, "name": "Hemn Saeed", "phone": "07501110005", "post_id": 5, "vehicle_type": "Van", "deliveries": 250, "rating": 4.6, "years_experience": 4},
+    {"id": 6, "name": "Aram Khalid", "phone": "07501110006", "post_id": 6, "vehicle_type": "Motorcycle", "deliveries": 380, "rating": 4.3, "years_experience": 3},
+    {"id": 7, "name": "Barzan Nazim", "phone": "07501110007", "post_id": 9, "vehicle_type": "Van", "deliveries": 270, "rating": 4.7, "years_experience": 6},
+    {"id": 8, "name": "Aso Farhad", "phone": "07501110008", "post_id": 9, "vehicle_type": "Motorcycle", "deliveries": 350, "rating": 4.4, "years_experience": 2},
+    {"id": 9, "name": "Zana Jamal", "phone": "07501110009", "post_id": 11, "vehicle_type": "Van", "deliveries": 200, "rating": 4.1, "years_experience": 3},
+    {"id": 10, "name": "Diler Rashid", "phone": "07501110010", "post_id": 13, "vehicle_type": "Truck", "deliveries": 310, "rating": 4.8, "years_experience": 8},
+    {"id": 11, "name": "Soran Aziz", "phone": "07501110011", "post_id": 13, "vehicle_type": "Van", "deliveries": 220, "rating": 4.0, "years_experience": 1},
+    {"id": 12, "name": "Hawre Bahram", "phone": "07501110012", "post_id": 8, "vehicle_type": "Motorcycle", "deliveries": 160, "rating": 4.5, "years_experience": 2},
+    {"id": 13, "name": "Kovan Salih", "phone": "07501110013", "post_id": 3, "vehicle_type": "Van", "deliveries": 95, "rating": 3.9, "years_experience": 1},
+    {"id": 14, "name": "Rawa Nuri", "phone": "07501110014", "post_id": 7, "vehicle_type": "Motorcycle", "deliveries": 140, "rating": 4.2, "years_experience": 2},
+    {"id": 15, "name": "Lana Qadir", "phone": "07501110015", "post_id": 10, "vehicle_type": "Van", "deliveries": 190, "rating": 4.6, "years_experience": 4},
+]
