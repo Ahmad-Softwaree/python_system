@@ -4,7 +4,7 @@
 {% block content %}
 <header class="mb-6">
   <h1 class="text-2xl font-bold text-brand-dark">Postal Analytics Dashboard</h1>
-  <p class="text-brand-muted text-sm mt-1">Click a chart button to load it one at a time from live MySQL data. Prices are in IQD.</p>
+  <p class="text-brand-muted text-sm mt-1">Business reports with shared filters. Amounts are in IQD.</p>
 </header>
 
 <section class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
@@ -24,28 +24,122 @@
   {% endfor %}
 </section>
 
+{# Global filters apply to whichever report is selected #}
+<section class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 md:p-5 mb-5">
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+    <h2 class="font-semibold text-brand-dark">Filters</h2>
+    <button type="button" id="filter-reset" class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50">Reset</button>
+  </div>
+
+  <div class="flex flex-wrap gap-2 mb-4">
+    <button type="button" class="preset-btn px-3 py-1.5 rounded-lg border border-slate-200 text-xs md:text-sm bg-white hover:border-brand" data-preset="today">Today</button>
+    <button type="button" class="preset-btn px-3 py-1.5 rounded-lg border border-slate-200 text-xs md:text-sm bg-white hover:border-brand" data-preset="week">This week</button>
+    <button type="button" class="preset-btn px-3 py-1.5 rounded-lg border border-slate-200 text-xs md:text-sm bg-white hover:border-brand" data-preset="month">This month</button>
+    <button type="button" class="preset-btn px-3 py-1.5 rounded-lg border border-slate-200 text-xs md:text-sm bg-white hover:border-brand" data-preset="year">This year</button>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-3">
+    <label class="text-xs text-brand-muted block">
+      Province
+      <select id="filter-province" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+        <option value="">All provinces</option>
+        {% for p in filter_options.provinces %}
+        <option value="{{ p.id }}">{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="text-xs text-brand-muted block">
+      City
+      <select id="filter-city" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+        <option value="">All cities</option>
+        {% for c in filter_options.cities %}
+        <option value="{{ c.id }}" data-province="{{ c.province_id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="text-xs text-brand-muted block">
+      Merchant
+      <select id="filter-merchant" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+        <option value="">All merchants</option>
+        {% for m in filter_options.merchants %}
+        <option value="{{ m.id }}">{{ m.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="text-xs text-brand-muted block">
+      Driver
+      <select id="filter-driver" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+        <option value="">All drivers</option>
+        {% for d in filter_options.drivers %}
+        <option value="{{ d.id }}">{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="text-xs text-brand-muted block">
+      Post office
+      <select id="filter-post" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+        <option value="">All posts</option>
+        {% for p in filter_options.posts %}
+        <option value="{{ p.id }}">{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="text-xs text-brand-muted block">
+      Status
+      <select id="filter-status" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white">
+        <option value="">All statuses</option>
+        {% for s in filter_options.statuses %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="text-xs text-brand-muted block">
+      Date from
+      <input type="date" id="filter-date-from" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white" />
+    </label>
+    <label class="text-xs text-brand-muted block">
+      Date to
+      <input type="date" id="filter-date-to" class="mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white" />
+    </label>
+  </div>
+
+  <div class="mt-4 flex justify-end">
+    <button type="button" id="filter-apply" class="px-4 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-teal-700">
+      Apply filters
+    </button>
+  </div>
+</section>
+
+{# Few report buttons instead of many chart-type buttons #}
 <section class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 md:p-5">
-  <h2 class="font-semibold text-brand-dark mb-3">Charts</h2>
+  <h2 class="font-semibold text-brand-dark mb-3">Reports</h2>
   <div class="flex flex-wrap gap-2 mb-5">
-    {% for chart in chart_catalog %}
-    <button type="button" data-chart-id="{{ chart.id }}"
-            class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-brand-dark text-xs md:text-sm hover:border-brand transition">
-      {{ chart.label }}
+    {% for report in report_catalog %}
+    <button type="button"
+            class="report-btn px-4 py-2 rounded-lg border border-slate-200 bg-white text-brand-dark text-sm hover:border-brand transition"
+            data-report="{{ report.key }}"
+            title="{{ report.description }}">
+      {{ report.label }}
     </button>
     {% endfor %}
   </div>
-  <div class="min-h-[320px] rounded-xl bg-brand-soft/40 border border-slate-100 p-4">
-    <div class="mb-3">
-      <h3 id="chart-title" class="font-semibold text-brand-dark">Select a chart</h3>
-      <p id="chart-lecture" class="text-xs text-brand-muted mt-1">Choose a button above to render one chart.</p>
-    </div>
-    <div id="chart-loading" class="hidden py-16 text-center text-brand-muted text-sm">Rendering chart…</div>
-    <p id="chart-empty" class="hidden py-16 text-center text-brand-muted text-sm">No chart to show.</p>
-    <img id="chart-image" alt="Chart" class="hidden w-full max-w-3xl mx-auto rounded-lg bg-white" />
+
+  <div id="report-meta" class="mb-4">
+    <h3 id="report-title" class="font-semibold text-brand-dark text-lg">Select a report</h3>
+    <p id="report-description" class="text-sm text-brand-muted mt-1">Choose Orders, Revenue, Delivery or Inventory.</p>
   </div>
+
+  <div id="report-summary" class="hidden grid grid-cols-2 md:grid-cols-5 gap-3 mb-5"></div>
+
+  <div id="report-loading" class="hidden py-16 text-center text-brand-muted text-sm">Building report charts…</div>
+  <div id="report-empty" class="hidden py-10 text-center text-brand-muted text-sm">No charts to show.</div>
+  <div id="report-charts" class="grid grid-cols-1 xl:grid-cols-2 gap-4"></div>
 </section>
 {% endblock %}
 
 {% block scripts %}
+<script>
+  window.DASHBOARD_CITIES = {{ filter_options.cities|tojson }};
+</script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}

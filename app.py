@@ -6,7 +6,7 @@ Entry: python app.py  →  http://localhost:3000
 from flask import Flask, abort, flash, jsonify, redirect, render_template, request, url_for
 from sqlalchemy import or_
 
-from charts import build_chart_by_id, get_chart_catalog
+from charts import build_report, get_report_catalog
 from config import Config
 from extensions import db
 from models import (
@@ -18,6 +18,7 @@ from models import (
     Order,
     OrderItem,
     Post,
+    Province,
     StockHistory,
 )
 from services import (
@@ -56,7 +57,6 @@ def create_app():
 def register_routes(app):
     @app.route("/")
     def dashboard():
-        chart_catalog = get_chart_catalog()
         active_orders = Order.query.filter(Order.deleted_at.is_(None)).all()
         stats = {
             "orders": len(active_orders),
@@ -68,19 +68,55 @@ def register_routes(app):
             "items": Item.query.filter(Item.deleted_at.is_(None)).count(),
             "cities": City.query.filter(City.deleted_at.is_(None)).count(),
         }
+        filter_options = {
+            "provinces": [
+                {"id": p.id, "name": p.name}
+                for p in Province.query.filter(Province.deleted_at.is_(None)).order_by(Province.name).all()
+            ],
+            "cities": [
+                {"id": c.id, "name": c.name, "province_id": c.province_id}
+                for c in City.query.filter(City.deleted_at.is_(None)).order_by(City.name).all()
+            ],
+            "merchants": [
+                {"id": m.id, "name": m.name}
+                for m in Merchant.query.filter(Merchant.deleted_at.is_(None)).order_by(Merchant.name).all()
+            ],
+            "drivers": [
+                {"id": d.id, "name": d.name}
+                for d in Driver.query.filter(Driver.deleted_at.is_(None)).order_by(Driver.name).all()
+            ],
+            "posts": [
+                {"id": p.id, "name": p.name}
+                for p in Post.query.filter(Post.deleted_at.is_(None)).order_by(Post.name).all()
+            ],
+            "statuses": ORDER_STATUSES,
+        }
         return render_template(
             "dashboard.html",
-            chart_catalog=chart_catalog,
+            report_catalog=get_report_catalog(),
+            filter_options=filter_options,
             stats=stats,
             active="dashboard",
         )
 
-    @app.route("/api/chart/<int:chart_id>")
-    def api_chart(chart_id):
-        chart = build_chart_by_id(chart_id)
-        if chart is None:
+    @app.route("/api/report/<report_key>")
+    def api_report(report_key):
+        """Build one dashboard report (multiple charts) with optional filters."""
+        filters = {
+            "province_id": request.args.get("province_id") or None,
+            "city_id": request.args.get("city_id") or None,
+            "merchant_id": request.args.get("merchant_id") or None,
+            "driver_id": request.args.get("driver_id") or None,
+            "post_id": request.args.get("post_id") or None,
+            "status": request.args.get("status") or None,
+            "date_from": request.args.get("date_from") or None,
+            "date_to": request.args.get("date_to") or None,
+            "preset": request.args.get("preset") or None,
+        }
+        report = build_report(report_key, filters)
+        if report is None:
             abort(404)
-        return jsonify(chart)
+        return jsonify(report)
 
     @app.route("/api/options/<source>")
     def api_options(source):

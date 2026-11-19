@@ -1,23 +1,3 @@
-# Header rows only — line items live in order_items.py
-orders = [
-    {"id": 1, "merchant_id": 1, "driver_id": 1, "post_id": 1, "city_id": 1, "street_id": 1, "total_price": 900000, "status": "Delivered", "order_date": "2025-01-05", "delivery_days": 2},
-    {"id": 2, "merchant_id": 1, "driver_id": 2, "post_id": 1, "city_id": 1, "street_id": 2, "total_price": 950000, "status": "Delivered", "order_date": "2025-01-08", "delivery_days": 3},
-    {"id": 3, "merchant_id": 2, "driver_id": 1, "post_id": 1, "city_id": 1, "street_id": 3, "total_price": 213000, "status": "Delivered", "order_date": "2025-01-12", "delivery_days": 1},
-    {"id": 4, "merchant_id": 3, "driver_id": 3, "post_id": 2, "city_id": 1, "street_id": 3, "total_price": 140000, "status": "In Transit", "order_date": "2025-01-15", "delivery_days": 2},
-    {"id": 5, "merchant_id": 4, "driver_id": 4, "post_id": 5, "city_id": 4, "street_id": 6, "total_price": 695000, "status": "Delivered", "order_date": "2025-01-18", "delivery_days": 2},
-    {"id": 6, "merchant_id": 4, "driver_id": 5, "post_id": 5, "city_id": 4, "street_id": 7, "total_price": 320000, "status": "Delivered", "order_date": "2025-01-20", "delivery_days": 1},
-    {"id": 7, "merchant_id": 5, "driver_id": 6, "post_id": 6, "city_id": 4, "street_id": 6, "total_price": 120000, "status": "Delivered", "order_date": "2025-01-22", "delivery_days": 1},
-    {"id": 8, "merchant_id": 5, "driver_id": 4, "post_id": 5, "city_id": 4, "street_id": 7, "total_price": 108000, "status": "Pending", "order_date": "2025-01-25", "delivery_days": 2},
-    {"id": 9, "merchant_id": 6, "driver_id": 14, "post_id": 7, "city_id": 5, "street_id": 8, "total_price": 125000, "status": "Delivered", "order_date": "2025-02-01", "delivery_days": 3},
-    {"id": 10, "merchant_id": 6, "driver_id": 14, "post_id": 7, "city_id": 5, "street_id": 8, "total_price": 85000, "status": "Cancelled", "order_date": "2025-02-03", "delivery_days": 0},
-    {"id": 11, "merchant_id": 7, "driver_id": 7, "post_id": 9, "city_id": 7, "street_id": 10, "total_price": 160000, "status": "Delivered", "order_date": "2025-02-05", "delivery_days": 1},
-    {"id": 12, "merchant_id": 7, "driver_id": 8, "post_id": 9, "city_id": 7, "street_id": 11, "total_price": 90000, "status": "Delivered", "order_date": "2025-02-08", "delivery_days": 2},
-    {"id": 13, "merchant_id": 8, "driver_id": 9, "post_id": 11, "city_id": 8, "street_id": 12, "total_price": 180000, "status": "In Transit", "order_date": "2025-02-10", "delivery_days": 2},
-    {"id": 14, "merchant_id": 9, "driver_id": 10, "post_id": 13, "city_id": 10, "street_id": 14, "total_price": 100000, "status": "Delivered", "order_date": "2025-02-12", "delivery_days": 2},
-    {"id": 15, "merchant_id": 9, "driver_id": 11, "post_id": 13, "city_id": 10, "street_id": 15, "total_price": 155000, "status": "Delivered", "order_date": "2025-02-14", "delivery_days": 1},
-    {"id": 16, "merchant_id": 10, "driver_id": 12, "post_id": 8, "city_id": 6, "street_id": 9, "total_price": 120000, "status": "Delivered", "order_date": "2025-02-16", "delivery_days": 4},
-    {"id": 17, "merchant_id": 11, "driver_id": 13, "post_id": 3, "city_id": 2, "street_id": 4, "total_price": 90000, "status": "Pending", "order_date": "2025-02-18", "delivery_days": 3},
-    {"id": 18, "merchant_id": 12, "driver_id": 7, "post_id": 9, "city_id": 7, "street_id": 10, "total_price": 168000, "status": "Delivered", "order_date": "2025-02-20", "delivery_days": 1},
-    {"id": 19, "merchant_id": 1, "driver_id": 2, "post_id": 1, "city_id": 1, "street_id": 1, "total_price": 525000, "status": "Delivered", "order_date": "2025-02-22", "delivery_days": 2},
-    {"id": 20, "merchant_id": 4, "driver_id": 5, "post_id": 5, "city_id": 4, "street_id": 6, "total_price": 950000, "status": "In Transit", "order_date": "2025-02-24", "delivery_days": 3},
-]
+# Small static sample kept for reference / docs.
+# seed.py generates 500+ varied orders programmatically (see generate_orders()).
+orders = []
