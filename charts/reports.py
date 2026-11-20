@@ -20,10 +20,13 @@ import seaborn as sns
 
 import pandas as pd
 
-from i18n import localized
+from i18n import localized, t
 from models import City, Driver, Item, ItemType, Merchant, Order, OrderItem, Post, Province, Rating
 
 sns.set_theme(style="whitegrid", palette="viridis")
+# Prefer fonts that can render Arabic / Kurdish in chart titles
+plt.rcParams["font.sans-serif"] = ["Segoe UI", "Tahoma", "Arial Unicode MS", "DejaVu Sans"]
+plt.rcParams["axes.unicode_minus"] = False
 COLORS = ["#0d7377", "#14919b", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51", "#264653", "#457b9d"]
 
 
@@ -117,10 +120,10 @@ def _lookups():
     return cities, provinces, merchants, drivers, posts, items, item_types
 
 
-def _empty_chart(message):
+def _empty_chart(message=None):
     fig, ax = plt.subplots(figsize=(7, 3.5))
     ax.axis("off")
-    ax.text(0.5, 0.5, message, ha="center", va="center", fontsize=12, color="#5f7375")
+    ax.text(0.5, 0.5, message or t("report.empty.no_data"), ha="center", va="center", fontsize=12, color="#5f7375")
     return _to_base64(fig)
 
 
@@ -130,7 +133,7 @@ def _top_n(counter: Counter, n=12):
 
 def _bar(labels, values, title, ylabel, color=COLORS[0], horizontal=False):
     if not labels:
-        return _empty_chart("No data for this filter")
+        return _empty_chart()
     fig, ax = plt.subplots(figsize=(8, 4.2))
     if horizontal:
         ax.barh(labels[::-1], values[::-1], color=color)
@@ -146,7 +149,7 @@ def _bar(labels, values, title, ylabel, color=COLORS[0], horizontal=False):
 
 def _pie(labels, values, title, donut=False):
     if not labels:
-        return _empty_chart("No data for this filter")
+        return _empty_chart()
     fig, ax = plt.subplots(figsize=(6.5, 5))
     wedges, *_ = ax.pie(
         values,
@@ -166,7 +169,7 @@ def _pie(labels, values, title, donut=False):
 
 def _line(labels, values, title, ylabel, fill=False):
     if not labels:
-        return _empty_chart("No data for this filter")
+        return _empty_chart()
     fig, ax = plt.subplots(figsize=(8, 4))
     if fill:
         ax.fill_between(labels, values, alpha=0.35, color=COLORS[2])
@@ -181,19 +184,26 @@ def _line(labels, values, title, ylabel, fill=False):
 def _summary(orders):
     revenue = sum(o.total_price for o in orders if o.status != "Cancelled")
     delivered = sum(1 for o in orders if o.status == "Delivered")
+    cancelled = sum(1 for o in orders if o.status == "Cancelled")
+    avg_days = (
+        round(np.mean([o.delivery_days for o in orders if o.delivery_days > 0]), 2)
+        if any(o.delivery_days > 0 for o in orders)
+        else 0
+    )
+    revenue_txt = f"{revenue:,.0f} IQD"
     return {
         "orders": len(orders),
         "delivered": delivered,
-        "cancelled": sum(1 for o in orders if o.status == "Cancelled"),
-        "revenue": f"{revenue:,.0f} IQD",
-        "avg_delivery_days": (
-            round(
-                np.mean([o.delivery_days for o in orders if o.delivery_days > 0]),
-                2,
-            )
-            if any(o.delivery_days > 0 for o in orders)
-            else 0
-        ),
+        "cancelled": cancelled,
+        "revenue": revenue_txt,
+        "avg_delivery_days": avg_days,
+        "cards": [
+            {"label": t("report.summary.orders"), "value": len(orders)},
+            {"label": t("report.summary.delivered"), "value": delivered},
+            {"label": t("report.summary.cancelled"), "value": cancelled},
+            {"label": t("report.summary.revenue"), "value": revenue_txt},
+            {"label": t("report.summary.avg_days"), "value": avg_days},
+        ],
     }
 
 
@@ -227,9 +237,11 @@ def build_orders_report(filters: dict):
             by_month[d[:7]] += v
         day_labels = sorted(by_month.keys())
         day_values = [by_month[m] for m in day_labels]
-        trend_title = "Orders Over Time (Monthly Line)"
+        trend_title = t("report.chart.orders_trend_monthly")
+        trend_mpl = trend_title
     else:
-        trend_title = "Orders Over Time (Daily Line)"
+        trend_title = t("report.chart.orders_trend_daily")
+        trend_mpl = trend_title
 
     city_top = _top_n(by_city)
     merchant_top = _top_n(by_merchant)
@@ -237,42 +249,56 @@ def build_orders_report(filters: dict):
 
     charts = [
         {
-            "title": "Orders by City (Bar)",
-            "lecture": "Compare order volume across delivery cities",
-            "image": _bar([k for k, _ in city_top], [v for _, v in city_top], "Orders by City", "Orders"),
+            "title": t("report.chart.orders_by_city"),
+            "lecture": t("report.lecture.volume_city"),
+            "image": _bar(
+                [k for k, _ in city_top],
+                [v for _, v in city_top],
+                t("report.mpl.orders_by_city"),
+                t("report.axis.orders"),
+            ),
         },
         {
-            "title": "Orders by Merchant (Horizontal Bar)",
-            "lecture": "Top merchants by number of orders",
+            "title": t("report.chart.orders_by_merchant"),
+            "lecture": t("report.lecture.which_merchants"),
             "image": _bar(
                 [k for k, _ in merchant_top],
                 [v for _, v in merchant_top],
-                "Orders by Merchant",
-                "Orders",
+                t("report.mpl.orders_by_merchant"),
+                t("report.axis.orders"),
                 color=COLORS[4],
                 horizontal=True,
             ),
         },
         {
-            "title": "Orders by Driver (Pie)",
-            "lecture": "Share of orders handled by each driver",
-            "image": _pie([k for k, _ in driver_top], [v for _, v in driver_top], "Orders by Driver"),
+            "title": t("report.chart.orders_by_driver"),
+            "lecture": t("report.lecture.driver_share"),
+            "image": _pie(
+                [k for k, _ in driver_top],
+                [v for _, v in driver_top],
+                t("report.mpl.orders_by_driver"),
+            ),
         },
         {
-            "title": "Orders by Status (Donut)",
-            "lecture": "Pending / In Transit / Delivered / Cancelled mix",
-            "image": _pie(list(by_status.keys()), list(by_status.values()), "Order Status Mix", donut=True),
+            "title": t("report.chart.orders_by_status"),
+            "lecture": t("report.lecture.status_mix"),
+            "image": _pie(
+                list(by_status.keys()),
+                list(by_status.values()),
+                t("report.mpl.orders_by_status"),
+                donut=True,
+            ),
         },
         {
             "title": trend_title,
-            "lecture": "How order volume changes over the selected period",
-            "image": _line(day_labels, day_values, trend_title, "Orders", fill=True),
+            "lecture": t("report.lecture.trend"),
+            "image": _line(day_labels, day_values, trend_mpl, t("report.axis.orders"), fill=True),
         },
     ]
     return {
         "key": "orders",
-        "title": "Orders Report",
-        "description": "Order volume by city, merchant, driver, status and time.",
+        "title": t("report.orders.title"),
+        "description": t("report.orders.desc_long"),
         "summary": summary,
         "charts": charts,
     }
@@ -306,47 +332,53 @@ def build_revenue_report(filters: dict):
 
     charts = [
         {
-            "title": "Revenue by Province (Bar)",
-            "lecture": "Which provinces generate the most IQD revenue",
+            "title": t("report.chart.revenue_by_province"),
+            "lecture": t("report.lecture.revenue_province"),
             "image": _bar(
                 [k for k, _ in prov_items],
                 [v for _, v in prov_items],
-                "Revenue by Province (IQD)",
-                "IQD",
+                t("report.mpl.revenue_province"),
+                t("report.axis.iqd"),
                 color=COLORS[1],
             ),
         },
         {
-            "title": "Revenue by City (Horizontal Bar)",
-            "lecture": "Top cities by revenue",
+            "title": t("report.chart.revenue_by_city"),
+            "lecture": t("report.lecture.revenue_city"),
             "image": _bar(
                 [k for k, _ in city_items],
                 [v for _, v in city_items],
-                "Revenue by City (IQD)",
-                "IQD",
+                t("report.mpl.revenue_city"),
+                t("report.axis.iqd"),
                 color=COLORS[5],
                 horizontal=True,
             ),
         },
         {
-            "title": "Revenue by Merchant (Pie)",
-            "lecture": "Revenue share of top merchants",
+            "title": t("report.chart.revenue_by_merchant"),
+            "lecture": t("report.lecture.revenue_merchant"),
             "image": _pie(
                 [k for k, _ in merchant_items[:8]],
                 [v for _, v in merchant_items[:8]],
-                "Revenue by Merchant",
+                t("report.mpl.revenue_merchant"),
             ),
         },
         {
-            "title": "Monthly Revenue (Area)",
-            "lecture": "Revenue trend over months in IQD",
-            "image": _line(month_labels, month_values, "Monthly Revenue (IQD)", "IQD", fill=True),
+            "title": t("report.chart.monthly_revenue"),
+            "lecture": t("report.lecture.monthly_revenue"),
+            "image": _line(
+                month_labels,
+                month_values,
+                t("report.mpl.monthly_revenue"),
+                t("report.axis.iqd"),
+                fill=True,
+            ),
         },
     ]
     return {
         "key": "revenue",
-        "title": "Revenue Report",
-        "description": "IQD revenue by province, city, merchant and month (cancelled excluded).",
+        "title": t("report.revenue.title"),
+        "description": t("report.revenue.desc_long"),
         "summary": summary,
         "charts": charts,
     }
@@ -377,42 +409,46 @@ def build_delivery_report(filters: dict):
     if all_days:
         fig, ax = plt.subplots(figsize=(8, 4))
         ax.hist(all_days, bins=min(10, max(all_days)), color=COLORS[0], edgecolor="white")
-        ax.set_title("Delivery Days Distribution (Histogram)")
-        ax.set_xlabel("Days")
-        ax.set_ylabel("Orders")
+        ax.set_title(t("report.mpl.delivery_hist"))
+        ax.set_xlabel(t("report.axis.days"))
+        ax.set_ylabel(t("report.axis.orders"))
         fig.tight_layout()
         hist_img = _to_base64(fig)
     else:
-        hist_img = _empty_chart("No delivery-day data")
+        hist_img = _empty_chart()
 
-    # Box-like bar of avg delivery by city
     charts = [
         {
-            "title": "Avg Delivery Days by City (Bar)",
-            "lecture": "Where deliveries take longer on average",
+            "title": t("report.chart.avg_delivery_city"),
+            "lecture": t("report.lecture.avg_days"),
             "image": _bar(
                 [k for k, _ in avg_items],
                 [v for _, v in avg_items],
-                "Average Delivery Days by City",
-                "Days",
+                t("report.mpl.avg_delivery"),
+                t("report.axis.days"),
                 color=COLORS[6],
             ),
         },
         {
-            "title": "Status Mix (Donut)",
-            "lecture": "Operational health of the filtered orders",
-            "image": _pie(list(by_status.keys()), list(by_status.values()), "Delivery Status Mix", donut=True),
+            "title": t("report.chart.status_mix"),
+            "lecture": t("report.lecture.status_health"),
+            "image": _pie(
+                list(by_status.keys()),
+                list(by_status.values()),
+                t("report.mpl.status_mix"),
+                donut=True,
+            ),
         },
         {
-            "title": "Delivery Days Distribution (Histogram)",
-            "lecture": "How delivery durations are spread",
+            "title": t("report.chart.delivery_hist"),
+            "lecture": t("report.lecture.days_spread"),
             "image": hist_img,
         },
     ]
     return {
         "key": "delivery",
-        "title": "Delivery Report",
-        "description": "Delivery speed and status health for the filtered period.",
+        "title": t("report.delivery.title"),
+        "description": t("report.delivery.desc_long"),
         "summary": summary,
         "charts": charts,
     }
@@ -459,27 +495,34 @@ def build_inventory_report(filters: dict):
 
     charts = [
         {
-            "title": "Top Sold Items (Horizontal Bar)",
-            "lecture": "Units sold in the filtered orders",
-            "image": _bar(item_labels, item_values, "Top Sold Items (Qty)", "Qty", color=COLORS[2], horizontal=True),
-        },
-        {
-            "title": "Sales by Item Type (Pie)",
-            "lecture": "Revenue share by category (IQD)",
-            "image": _pie(
-                [k for k, _ in type_items],
-                [v for _, v in type_items],
-                "Sales by Item Type",
+            "title": t("report.chart.top_sold"),
+            "lecture": t("report.lecture.top_qty"),
+            "image": _bar(
+                item_labels,
+                item_values,
+                t("report.mpl.top_sold"),
+                t("report.axis.qty"),
+                color=COLORS[2],
+                horizontal=True,
             ),
         },
         {
-            "title": "Lowest Stock Items (Bar)",
-            "lecture": "Live stock levels — watch what may run out",
+            "title": t("report.chart.sales_by_type"),
+            "lecture": t("report.lecture.type_share"),
+            "image": _pie(
+                [k for k, _ in type_items],
+                [v for _, v in type_items],
+                t("report.mpl.sales_type"),
+            ),
+        },
+        {
+            "title": t("report.chart.low_stock"),
+            "lecture": t("report.lecture.restock"),
             "image": _bar(
                 [k for k, _ in stock_sorted],
                 [v for _, v in stock_sorted],
-                "Lowest Current Stock",
-                "Stock",
+                t("report.mpl.low_stock"),
+                t("report.axis.stock"),
                 color=COLORS[5],
                 horizontal=True,
             ),
@@ -487,8 +530,8 @@ def build_inventory_report(filters: dict):
     ]
     return {
         "key": "inventory",
-        "title": "Inventory & Sales Report",
-        "description": "What sold in the filtered period, plus current low-stock items.",
+        "title": t("report.inventory.title"),
+        "description": t("report.inventory.desc_long"),
         "summary": summary,
         "charts": charts,
     }
@@ -501,21 +544,25 @@ def build_ratings_report(filters: dict):
 
     ratings = Rating.query.filter(Rating.deleted_at.is_(None)).all()
     if not ratings:
-        empty = _empty_chart("No ratings yet")
+        empty = _empty_chart()
         return {
             "key": "ratings",
-            "title": "Ratings Report",
-            "description": "Customer scores for items (1–5 stars).",
+            "title": t("report.ratings.title"),
+            "description": t("report.ratings.desc_long"),
             "summary": {
                 "cards": [
-                    {"label": "Ratings", "value": 0},
-                    {"label": "Avg score", "value": "-"},
-                    {"label": "Items rated", "value": 0},
-                    {"label": "Orders (filter)", "value": len(orders)},
+                    {"label": t("report.summary.ratings"), "value": 0},
+                    {"label": t("report.summary.avg_score"), "value": "-"},
+                    {"label": t("report.summary.items_rated"), "value": 0},
+                    {"label": t("report.summary.orders_filter"), "value": len(orders)},
                 ]
             },
             "charts": [
-                {"title": "No ratings", "lecture": "Add ratings from the Ratings table", "image": empty},
+                {
+                    "title": t("report.chart.no_ratings"),
+                    "lecture": t("report.lecture.add_ratings"),
+                    "image": empty,
+                },
             ],
         }
 
@@ -539,59 +586,59 @@ def build_ratings_report(filters: dict):
 
     fig, ax = plt.subplots(figsize=(7.5, 4))
     ax.bar(score_labels, score_values, color=COLORS[0])
-    ax.set_title("Rating Score Distribution (1–5)")
-    ax.set_xlabel("Stars")
-    ax.set_ylabel("Count")
+    ax.set_title(t("report.mpl.score_dist"))
+    ax.set_xlabel(t("report.axis.stars"))
+    ax.set_ylabel(t("report.axis.count"))
     fig.tight_layout()
     dist_img = _to_base64(fig)
 
     charts = [
         {
-            "title": "Average Rating by Item (Horizontal Bar)",
-            "lecture": "Highest-rated products first",
+            "title": t("report.chart.top_rated"),
+            "lecture": t("report.lecture.top_rated"),
             "image": _bar(
                 [localized(items[i]) if items.get(i) else f"#{i}" for i, _ in top],
                 [v for _, v in top],
-                "Top Rated Items (Avg Stars)",
-                "Avg rating",
+                t("report.mpl.top_rated"),
+                t("report.axis.avg_rating"),
                 color=COLORS[3],
                 horizontal=True,
             ),
         },
         {
-            "title": "Lowest Rated Items (Horizontal Bar)",
-            "lecture": "Products that may need attention",
+            "title": t("report.chart.low_rated"),
+            "lecture": t("report.lecture.low_rated"),
             "image": _bar(
                 [localized(items[i]) if items.get(i) else f"#{i}" for i, _ in bottom],
                 [v for _, v in bottom],
-                "Lowest Rated Items",
-                "Avg rating",
+                t("report.mpl.low_rated"),
+                t("report.axis.avg_rating"),
                 color=COLORS[5],
                 horizontal=True,
             ),
         },
         {
-            "title": "Rating Score Distribution (Bar)",
-            "lecture": "How many 1★ … 5★ reviews exist",
+            "title": t("report.chart.score_dist"),
+            "lecture": t("report.lecture.stars"),
             "image": dist_img,
         },
         {
-            "title": "Ratings Share by Score (Donut)",
-            "lecture": "Proportion of each star rating",
-            "image": _pie(score_labels, score_values, "Share of Star Ratings", donut=True),
+            "title": t("report.chart.score_share"),
+            "lecture": t("report.lecture.star_share"),
+            "image": _pie(score_labels, score_values, t("report.mpl.score_share"), donut=True),
         },
     ]
     return {
         "key": "ratings",
-        "title": "Ratings Report",
-        "description": f"Item star ratings. Overall average: {avg_score}/5 from {len(all_scores)} reviews.",
+        "title": t("report.ratings.title"),
+        "description": t("report.ratings.desc_avg", avg=avg_score, count=len(all_scores)),
         "summary": {
             "cards": [
-                {"label": "Ratings", "value": len(all_scores)},
-                {"label": "Avg score", "value": f"{avg_score}/5"},
-                {"label": "Items rated", "value": len(avg_by_item)},
-                {"label": "5-star count", "value": score_counts.get(5, 0)},
-                {"label": "Orders (filter)", "value": len(orders)},
+                {"label": t("report.summary.ratings"), "value": len(all_scores)},
+                {"label": t("report.summary.avg_score"), "value": f"{avg_score}/5"},
+                {"label": t("report.summary.items_rated"), "value": len(avg_by_item)},
+                {"label": t("report.summary.five_star"), "value": score_counts.get(5, 0)},
+                {"label": t("report.summary.orders_filter"), "value": len(orders)},
             ]
         },
         "charts": charts,
@@ -653,29 +700,26 @@ def build_correlations_report(filters: dict):
         vmax=1,
         linewidths=0.5,
     )
-    ax.set_title("Item Metrics Correlation Heatmap")
+    ax.set_title(t("report.mpl.corr"))
     fig.tight_layout()
     corr_img = _to_base64(fig)
 
-    # Second heatmap: top items × normalized metrics (nice visual “connect together”)
     plot_df = df.dropna(subset=["avg_rating"]).copy()
     if plot_df.empty:
         plot_df = df.copy()
     plot_df = plot_df.sort_values("quantity_sold", ascending=False).head(12)
     heat_cols = ["avg_rating", "sell_price", "quantity_sold", "order_count", "revenue"]
     matrix = plot_df.set_index("item")[heat_cols].astype(float)
-    # Min-max normalize each column so price and quantity can share a scale
     norm = (matrix - matrix.min()) / (matrix.max() - matrix.min()).replace(0, 1)
 
     fig2, ax2 = plt.subplots(figsize=(8.5, 5.5))
     sns.heatmap(norm, annot=True, fmt=".2f", cmap="YlGnBu", ax=ax2, linewidths=0.4)
-    ax2.set_title("Top Items × Metrics (Normalized Heatmap)")
-    ax2.set_xlabel("Metric")
-    ax2.set_ylabel("Item")
+    ax2.set_title(t("report.mpl.items_heat"))
+    ax2.set_xlabel(t("report.axis.metric"))
+    ax2.set_ylabel(t("report.axis.item"))
     fig2.tight_layout()
     items_heat_img = _to_base64(fig2)
 
-    # Scatter: sell price vs avg rating (size = quantity)
     scatter_df = df.dropna(subset=["avg_rating"])
     if not scatter_df.empty:
         fig3, ax3 = plt.subplots(figsize=(7.5, 4.5))
@@ -688,42 +732,42 @@ def build_correlations_report(filters: dict):
             alpha=0.65,
             edgecolors=COLORS[0],
         )
-        ax3.set_title("Sell Price vs Rating (bubble = quantity sold)")
-        ax3.set_xlabel("Sell price (IQD)")
-        ax3.set_ylabel("Avg rating")
+        ax3.set_title(t("report.mpl.price_rating"))
+        ax3.set_xlabel(t("report.axis.sell_price"))
+        ax3.set_ylabel(t("report.axis.avg_rating"))
         fig3.tight_layout()
         scatter_img = _to_base64(fig3)
     else:
-        scatter_img = _empty_chart("Need ratings to plot price vs score")
+        scatter_img = _empty_chart(t("report.empty.need_ratings"))
 
     rated = int(df["avg_rating"].notna().sum())
     return {
         "key": "correlations",
-        "title": "Correlations & Heatmap",
-        "description": "Connects avg rating, sell price, quantity sold, order count and revenue per item.",
+        "title": t("report.correlations.title"),
+        "description": t("report.correlations.desc_long"),
         "summary": {
             "cards": [
-                {"label": "Items", "value": len(df)},
-                {"label": "With ratings", "value": rated},
-                {"label": "Orders (filter)", "value": len(orders)},
-                {"label": "Qty sold", "value": int(df["quantity_sold"].sum())},
-                {"label": "Revenue", "value": f"{df['revenue'].sum():,.0f} IQD"},
+                {"label": t("report.summary.items"), "value": len(df)},
+                {"label": t("report.summary.with_ratings"), "value": rated},
+                {"label": t("report.summary.orders_filter"), "value": len(orders)},
+                {"label": t("report.summary.qty_sold"), "value": int(df["quantity_sold"].sum())},
+                {"label": t("report.summary.revenue"), "value": f"{df['revenue'].sum():,.0f} IQD"},
             ]
         },
         "charts": [
             {
-                "title": "Correlation Heatmap",
-                "lecture": "Pearson links between rating, price, qty, orders, revenue (−1…+1)",
+                "title": t("report.chart.corr_heat"),
+                "lecture": t("report.lecture.pearson"),
                 "image": corr_img,
             },
             {
-                "title": "Items × Metrics Heatmap",
-                "lecture": "Normalized view of top sold items across key metrics",
+                "title": t("report.chart.items_heat"),
+                "lecture": t("report.lecture.normalized"),
                 "image": items_heat_img,
             },
             {
-                "title": "Price vs Rating (Bubble)",
-                "lecture": "Do expensive items get better ratings? Bubble size = qty sold",
+                "title": t("report.chart.price_rating"),
+                "lecture": t("report.lecture.bubble"),
                 "image": scatter_img,
             },
         ],
@@ -739,18 +783,18 @@ REPORT_BUILDERS = {
     "correlations": build_correlations_report,
 }
 
-REPORT_CATALOG = [
-    {"key": "orders", "label": "Orders Report", "description": "Orders by city, merchant, driver, status & time"},
-    {"key": "revenue", "label": "Revenue Report", "description": "IQD revenue by province, city, merchant & month"},
-    {"key": "delivery", "label": "Delivery Report", "description": "Delivery speed and status health"},
-    {"key": "inventory", "label": "Inventory Report", "description": "Top sold items, categories & low stock"},
-    {"key": "ratings", "label": "Ratings Report", "description": "Item star ratings averages and distribution"},
-    {"key": "correlations", "label": "Heatmap Report", "description": "Rating × price × quantity × orders correlations"},
-]
+REPORT_KEYS = ["orders", "revenue", "delivery", "inventory", "ratings", "correlations"]
 
 
 def get_report_catalog():
-    return REPORT_CATALOG
+    return [
+        {
+            "key": key,
+            "label": t(f"report.{key}.label"),
+            "description": t(f"report.{key}.description"),
+        }
+        for key in REPORT_KEYS
+    ]
 
 
 def build_report(key: str, filters: dict | None = None):

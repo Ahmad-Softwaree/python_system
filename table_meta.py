@@ -5,6 +5,7 @@ Field types:
   text | number | float | bool | date | relation
 
 Multilang fields use name_en / name_ar / name_ckb (etc.).
+Column/field labels use label_key → t(label_key) at render time.
 """
 
 from models import (
@@ -24,12 +25,30 @@ from models import (
 )
 
 
-def trilang_fields(base, label_en, required=True):
+def trilang_fields(base, label_key_base, required=True):
     """Form fields for EN / AR / CKB of one logical column."""
     return [
-        {"name": f"{base}_en", "label": f"{label_en} (EN)", "type": "text", "required": required, "i18n": f"field.{base}_en"},
-        {"name": f"{base}_ar", "label": f"{label_en} (AR)", "type": "text", "required": required, "i18n": f"field.{base}_ar"},
-        {"name": f"{base}_ckb", "label": f"{label_en} (CKB)", "type": "text", "required": required, "i18n": f"field.{base}_ckb"},
+        {
+            "name": f"{base}_en",
+            "label": f"{base}_en",
+            "type": "text",
+            "required": required,
+            "label_key": f"field.{base}_en",
+        },
+        {
+            "name": f"{base}_ar",
+            "label": f"{base}_ar",
+            "type": "text",
+            "required": required,
+            "label_key": f"field.{base}_ar",
+        },
+        {
+            "name": f"{base}_ckb",
+            "label": f"{base}_ckb",
+            "type": "text",
+            "required": required,
+            "label_key": f"field.{base}_ckb",
+        },
     ]
 
 
@@ -37,253 +56,239 @@ def trilang_search(base):
     return [f"{base}_en", f"{base}_ar", f"{base}_ckb"]
 
 
+def col(key, label_key):
+    return {"key": key, "label_key": label_key}
+
+
+def field(name, label_key, ftype, required=True, **extra):
+    d = {"name": name, "label_key": label_key, "type": ftype, "required": required}
+    d.update(extra)
+    return d
+
+
 TABLES = {
     "roles": {
-        "title": "Roles",
         "title_key": "table.roles",
         "model": Role,
-        "view_columns": [
-            {"key": "id", "label": "ID"},
-            {"key": "name", "label": "Name"},
-            {"key": "description", "label": "Description"},
-        ],
+        "view_columns": [col("id", "col.id"), col("name", "col.name"), col("description", "col.description")],
         "search": trilang_search("name") + trilang_search("description"),
-        "fields": trilang_fields("name", "Name") + trilang_fields("description", "Description"),
+        "fields": trilang_fields("name", "name") + trilang_fields("description", "description"),
     },
     "provinces": {
-        "title": "Provinces",
         "title_key": "table.provinces",
         "model": Province,
         "view_columns": [
-            {"key": "id", "label": "ID"},
-            {"key": "name", "label": "Name"},
-            {"key": "code", "label": "Code"},
-            {"key": "population", "label": "Population"},
+            col("id", "col.id"),
+            col("name", "col.name"),
+            col("code", "col.code"),
+            col("population", "col.population"),
         ],
         "search": trilang_search("name") + ["code"],
-        "fields": trilang_fields("name", "Name")
+        "fields": trilang_fields("name", "name")
         + [
-            {"name": "code", "label": "Code", "type": "text", "required": True},
-            {"name": "population", "label": "Population", "type": "number", "required": True},
+            field("code", "col.code", "text"),
+            field("population", "col.population", "number"),
         ],
     },
     "cities": {
-        "title": "Cities",
         "title_key": "table.cities",
         "model": City,
         "view_columns": [
-            {"key": "id", "label": "ID"},
-            {"key": "name", "label": "Name"},
-            {"key": "province_name", "label": "Province"},
-            {"key": "population", "label": "Population"},
+            col("id", "col.id"),
+            col("name", "col.name"),
+            col("province_name", "col.province"),
+            col("population", "col.population"),
         ],
         "search": trilang_search("name"),
-        "fields": trilang_fields("name", "Name")
+        "fields": trilang_fields("name", "name")
         + [
-            {"name": "province_id", "label": "Province", "type": "relation", "source": "provinces", "required": True},
-            {"name": "population", "label": "Population", "type": "number", "required": True},
+            field("province_id", "col.province", "relation", source="provinces"),
+            field("population", "col.population", "number"),
         ],
     },
     "streets": {
-        "title": "Streets",
         "title_key": "table.streets",
         "model": Street,
         "view_columns": [
-            {"key": "id", "label": "ID"},
-            {"key": "name", "label": "Name"},
-            {"key": "city_name", "label": "City"},
-            {"key": "postal_code", "label": "Postal Code"},
+            col("id", "col.id"),
+            col("name", "col.name"),
+            col("city_name", "col.city"),
+            col("postal_code", "col.postal_code"),
         ],
         "search": trilang_search("name") + ["postal_code"],
-        "fields": trilang_fields("name", "Name")
+        "fields": trilang_fields("name", "name")
         + [
-            {"name": "city_id", "label": "City", "type": "relation", "source": "cities", "required": True},
-            {"name": "postal_code", "label": "Postal Code", "type": "text", "required": True},
+            field("city_id", "col.city", "relation", source="cities"),
+            field("postal_code", "col.postal_code", "text"),
         ],
     },
     "posts": {
-        "title": "Post Offices",
         "title_key": "table.posts",
         "model": Post,
         "view_columns": [
-            {"key": "id", "label": "ID"},
-            {"key": "name", "label": "Name"},
-            {"key": "city_name", "label": "City"},
-            {"key": "street_name", "label": "Street"},
-            {"key": "capacity", "label": "Capacity"},
-            {"key": "staff_count", "label": "Staff"},
+            col("id", "col.id"),
+            col("name", "col.name"),
+            col("city_name", "col.city"),
+            col("street_name", "col.street"),
+            col("capacity", "col.capacity"),
+            col("staff_count", "col.staff"),
         ],
         "search": trilang_search("name"),
-        "fields": trilang_fields("name", "Name")
+        "fields": trilang_fields("name", "name")
         + [
-            {"name": "city_id", "label": "City", "type": "relation", "source": "cities", "required": True},
-            {"name": "street_id", "label": "Street", "type": "relation", "source": "streets", "required": True},
-            {"name": "capacity", "label": "Capacity", "type": "number", "required": True},
-            {"name": "staff_count", "label": "Staff Count", "type": "number", "required": True},
+            field("city_id", "col.city", "relation", source="cities"),
+            field("street_id", "col.street", "relation", source="streets"),
+            field("capacity", "col.capacity", "number"),
+            field("staff_count", "col.staff_count", "number"),
         ],
     },
     "drivers": {
-        "title": "Drivers",
         "title_key": "table.drivers",
         "model": Driver,
         "view_columns": [
-            {"key": "id", "label": "ID"},
-            {"key": "name", "label": "Name"},
-            {"key": "phone", "label": "Phone"},
-            {"key": "vehicle_type", "label": "Vehicle"},
-            {"key": "deliveries", "label": "Deliveries"},
-            {"key": "rating", "label": "Rating"},
-            {"key": "years_experience", "label": "Years Exp."},
+            col("id", "col.id"),
+            col("name", "col.name"),
+            col("phone", "col.phone"),
+            col("vehicle_type", "col.vehicle"),
+            col("deliveries", "col.deliveries"),
+            col("rating", "col.rating"),
+            col("years_experience", "col.years_exp"),
         ],
         "search": trilang_search("name") + ["phone"] + trilang_search("vehicle_type"),
-        "fields": trilang_fields("name", "Name")
+        "fields": trilang_fields("name", "name")
+        + [field("phone", "col.phone", "text")]
+        + trilang_fields("vehicle_type", "vehicle_type")
         + [
-            {"name": "phone", "label": "Phone", "type": "text", "required": True},
-        ]
-        + trilang_fields("vehicle_type", "Vehicle Type")
-        + [
-            {"name": "deliveries", "label": "Deliveries", "type": "number", "required": True},
-            {"name": "rating", "label": "Rating", "type": "float", "required": True},
-            {"name": "years_experience", "label": "Years Experience", "type": "number", "required": True},
+            field("deliveries", "col.deliveries", "number"),
+            field("rating", "col.rating", "float"),
+            field("years_experience", "col.years_experience", "number"),
         ],
     },
     "merchants": {
-        "title": "Merchants",
         "title_key": "table.merchants",
         "model": Merchant,
         "view_columns": [
-            {"key": "id", "label": "ID"},
-            {"key": "name", "label": "Name"},
-            {"key": "city_name", "label": "City"},
-            {"key": "phone", "label": "Phone"},
-            {"key": "total_orders", "label": "Orders"},
-            {"key": "revenue_iqd", "label": "Revenue"},
+            col("id", "col.id"),
+            col("name", "col.name"),
+            col("city_name", "col.city"),
+            col("phone", "col.phone"),
+            col("total_orders", "col.orders"),
+            col("revenue_iqd", "col.revenue"),
         ],
         "search": trilang_search("name") + ["phone"],
-        "fields": trilang_fields("name", "Name")
+        "fields": trilang_fields("name", "name")
         + [
-            {"name": "city_id", "label": "City", "type": "relation", "source": "cities", "required": True},
-            {"name": "phone", "label": "Phone", "type": "text", "required": True},
-            {"name": "total_orders", "label": "Total Orders", "type": "number", "required": True},
-            {"name": "revenue", "label": "Revenue (IQD)", "type": "float", "required": True},
+            field("city_id", "col.city", "relation", source="cities"),
+            field("phone", "col.phone", "text"),
+            field("total_orders", "col.total_orders", "number"),
+            field("revenue", "col.revenue_iqd", "float"),
         ],
     },
     "admins": {
-        "title": "Admins",
         "title_key": "table.admins",
         "model": Admin,
         "view_columns": [
-            {"key": "id", "label": "ID"},
-            {"key": "name", "label": "Name"},
-            {"key": "email", "label": "Email"},
-            {"key": "role_name", "label": "Role"},
-            {"key": "active", "label": "Active"},
+            col("id", "col.id"),
+            col("name", "col.name"),
+            col("email", "col.email"),
+            col("role_name", "col.role"),
+            col("active", "col.active"),
         ],
         "search": trilang_search("name") + ["email"],
-        "fields": trilang_fields("name", "Name")
+        "fields": trilang_fields("name", "name")
         + [
-            {"name": "email", "label": "Email", "type": "text", "required": True},
-            {"name": "role_id", "label": "Role", "type": "relation", "source": "roles", "required": True},
-            {"name": "active", "label": "Active", "type": "bool", "required": False},
+            field("email", "col.email", "text"),
+            field("role_id", "col.role", "relation", source="roles"),
+            field("active", "col.active", "bool", required=False),
         ],
     },
     "item_types": {
-        "title": "Item Types",
         "title_key": "table.item_types",
         "model": ItemType,
-        "view_columns": [
-            {"key": "id", "label": "ID"},
-            {"key": "name", "label": "Name"},
-            {"key": "description", "label": "Description"},
-        ],
+        "view_columns": [col("id", "col.id"), col("name", "col.name"), col("description", "col.description")],
         "search": trilang_search("name") + trilang_search("description"),
-        "fields": trilang_fields("name", "Name") + trilang_fields("description", "Description"),
+        "fields": trilang_fields("name", "name") + trilang_fields("description", "description"),
     },
     "items": {
-        "title": "Items",
         "title_key": "table.items",
         "model": Item,
         "view_columns": [
-            {"key": "id", "label": "ID"},
-            {"key": "name", "label": "Name"},
-            {"key": "item_type_name", "label": "Item Type"},
-            {"key": "merchant_name", "label": "Merchant"},
-            {"key": "price_iqd", "label": "Price"},
-            {"key": "stock", "label": "Stock"},
+            col("id", "col.id"),
+            col("name", "col.name"),
+            col("item_type_name", "col.item_type"),
+            col("merchant_name", "col.merchant"),
+            col("price_iqd", "col.price"),
+            col("stock", "col.stock"),
         ],
         "search": trilang_search("name"),
         "row_link": "stock_history",
-        "fields": trilang_fields("name", "Name")
+        "fields": trilang_fields("name", "name")
         + [
-            {"name": "item_type_id", "label": "Item Type", "type": "relation", "source": "item_types", "required": True},
-            {"name": "merchant_id", "label": "Merchant", "type": "relation", "source": "merchants", "required": True},
-            {"name": "price", "label": "Price (IQD)", "type": "float", "required": True},
-            {"name": "stock", "label": "Stock", "type": "number", "required": True},
+            field("item_type_id", "col.item_type", "relation", source="item_types"),
+            field("merchant_id", "col.merchant", "relation", source="merchants"),
+            field("price", "col.price_iqd", "float"),
+            field("stock", "col.stock", "number"),
         ],
     },
     "orders": {
-        "title": "Orders",
         "title_key": "table.orders",
         "model": Order,
         "special": "orders",
         "view_columns": [
-            {"key": "id", "label": "ID"},
-            {"key": "merchant_name", "label": "Merchant"},
-            {"key": "driver_name", "label": "Driver"},
-            {"key": "post_name", "label": "Post"},
-            {"key": "city_name", "label": "City"},
-            {"key": "street_name", "label": "Street"},
-            {"key": "items_summary", "label": "Items"},
-            {"key": "total_price_iqd", "label": "Total"},
-            {"key": "status", "label": "Status"},
-            {"key": "order_date", "label": "Date"},
-            {"key": "delivery_days", "label": "Days"},
+            col("id", "col.id"),
+            col("merchant_name", "col.merchant"),
+            col("driver_name", "col.driver"),
+            col("post_name", "col.post"),
+            col("city_name", "col.city"),
+            col("street_name", "col.street"),
+            col("items_summary", "col.items"),
+            col("total_price_iqd", "col.total"),
+            col("status", "col.status"),
+            col("order_date", "col.date"),
+            col("delivery_days", "col.days"),
         ],
         "search": ["status"],
         "fields": [
-            {"name": "merchant_id", "label": "Merchant", "type": "relation", "source": "merchants", "required": True},
-            {"name": "driver_id", "label": "Driver", "type": "relation", "source": "drivers", "required": True},
-            {"name": "post_id", "label": "Post Office", "type": "relation", "source": "posts", "required": True},
-            {"name": "city_id", "label": "City", "type": "relation", "source": "cities", "required": True},
-            {"name": "street_id", "label": "Street", "type": "relation", "source": "streets", "required": True},
-            {"name": "order_date", "label": "Order Date", "type": "date", "required": True},
-            {"name": "delivery_days", "label": "Delivery Days", "type": "number", "required": True},
+            field("merchant_id", "col.merchant", "relation", source="merchants"),
+            field("driver_id", "col.driver", "relation", source="drivers"),
+            field("post_id", "col.post_office", "relation", source="posts"),
+            field("city_id", "col.city", "relation", source="cities"),
+            field("street_id", "col.street", "relation", source="streets"),
+            field("order_date", "col.order_date", "date"),
+            field("delivery_days", "col.delivery_days", "number"),
         ],
     },
     "ratings": {
-        "title": "Ratings",
         "title_key": "table.ratings",
         "model": Rating,
         "view_columns": [
-            {"key": "id", "label": "ID"},
-            {"key": "item_name", "label": "Item"},
-            {"key": "score", "label": "Score"},
-            {"key": "comment", "label": "Comment"},
-            {"key": "created_at", "label": "Created"},
+            col("id", "col.id"),
+            col("item_name", "col.item"),
+            col("score", "col.score"),
+            col("comment", "col.comment"),
+            col("created_at", "col.created"),
         ],
         "search": trilang_search("comment"),
         "fields": [
-            {"name": "item_id", "label": "Item", "type": "relation", "source": "items", "required": True},
-            {"name": "score", "label": "Score (1-5)", "type": "number", "required": True},
+            field("item_id", "col.item", "relation", source="items"),
+            field("score", "col.score_1_5", "number"),
         ]
-        + trilang_fields("comment", "Comment", required=False),
+        + trilang_fields("comment", "comment", required=False),
     },
     "feedbacks": {
-        "title": "Feedback",
         "title_key": "table.feedbacks",
         "model": Feedback,
         "view_columns": [
-            {"key": "id", "label": "ID"},
-            {"key": "title", "label": "Title"},
-            {"key": "body", "label": "Body"},
-            {"key": "created_at", "label": "Created"},
+            col("id", "col.id"),
+            col("title", "col.title"),
+            col("body", "col.body"),
+            col("created_at", "col.created"),
         ],
         "search": trilang_search("title") + trilang_search("body"),
-        "fields": trilang_fields("title", "Title") + trilang_fields("body", "Body"),
+        "fields": trilang_fields("title", "title") + trilang_fields("body", "body"),
     },
 }
 
-# Combobox sources — label column is resolved live via localized()
 OPTION_SOURCES = {
     "roles": Role,
     "provinces": Province,
@@ -295,6 +300,30 @@ OPTION_SOURCES = {
     "item_types": ItemType,
     "items": Item,
 }
+
+
+def translate_columns(columns):
+    from i18n import t
+
+    out = []
+    for c in columns:
+        item = dict(c)
+        key = item.get("label_key")
+        item["label"] = t(key) if key else item.get("label", item.get("key", ""))
+        out.append(item)
+    return out
+
+
+def translate_fields(fields):
+    from i18n import t
+
+    out = []
+    for f in fields:
+        item = dict(f)
+        key = item.get("label_key") or item.get("i18n")
+        item["label"] = t(key) if key else item.get("label", item.get("name", ""))
+        out.append(item)
+    return out
 
 
 def nav_tables():

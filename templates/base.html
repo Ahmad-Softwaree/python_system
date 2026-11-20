@@ -57,19 +57,37 @@
   <style>
     .ui-card {
       border-radius: 1rem;
-      border: 1px solid rgba(226, 232, 240, 0.9);
-      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      background: #ffffff;
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-      backdrop-filter: blur(6px);
       transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
     }
     .ui-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(13, 115, 119, 0.12); }
     .dark .ui-card {
-      background: rgba(15, 23, 42, 0.85);
+      background: #0f172a;
+      border-color: rgba(51, 65, 85, 0.9);
+      box-shadow: none;
+    }
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Stat cards must include .ui-card look — background was missing before */
+    .ui-stat {
+      padding: 1rem;
+      border-radius: 1rem;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      background: #ffffff;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+      transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+      animation: fade-up 0.45s ease-out both;
+    }
+    .ui-stat:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(13, 115, 119, 0.12); }
+    .dark .ui-stat {
+      background: #0f172a;
       border-color: rgba(51, 65, 85, 0.85);
       box-shadow: none;
     }
-    .ui-stat { padding: 1rem; animation: fade-up 0.45s ease-out both; }
     #sidebar-backdrop { display: none; }
     @media (max-width: 767px) {
       #sidebar {

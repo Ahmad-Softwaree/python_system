@@ -17,7 +17,7 @@
     (stats.posts, t('stat.posts'))
   ] %}
   {% for value, label in cards %}
-  <div class="ui-stat" style="animation-delay: {{ loop.index0 * 40 }}ms">
+  <div class="ui-stat ui-card" style="animation-delay: {{ loop.index0 * 40 }}ms">
     <div class="text-xl font-bold text-brand dark:text-teal-300">{{ value }}</div>
     <div class="text-xs text-brand-muted dark:text-slate-400 mt-1">{{ label }}</div>
   </div>
@@ -110,13 +110,13 @@
   <div class="mt-4 flex justify-end">
     <button type="button" id="filter-apply"
             class="px-4 py-2 rounded-xl bg-brand text-white text-sm font-medium hover:bg-teal-700 shadow-sm shadow-teal-900/20 transition active:scale-[0.98]">
-      {{ t('dashboard.filters') }}
+      {{ t('dashboard.apply') }}
     </button>
   </div>
 </section>
 
 <section class="ui-card p-4 md:p-5 animate-fade-up" style="animation-delay:120ms">
-  <h2 class="font-semibold text-brand-dark dark:text-slate-100 mb-3">Reports</h2>
+  <h2 class="font-semibold text-brand-dark dark:text-slate-100 mb-3">{{ t('dashboard.reports') }}</h2>
   <div class="flex flex-wrap gap-2 mb-5">
     {% for report in report_catalog %}
     <button type="button"

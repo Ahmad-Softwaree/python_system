@@ -36,21 +36,26 @@
     if (wrap) wrap.innerHTML = "";
   }
 
+  const i18n = window.TABLE_I18N || {};
+
   function addOrderLine(itemId, qty, label) {
     const wrap = document.getElementById("order-lines");
     if (!wrap) return;
     const row = document.createElement("div");
     row.className = "flex gap-2 items-start order-line";
+    const searchPh = i18n.searchItem || "Search item...";
+    const qtyPh = i18n.qty || "Qty";
+    const removeTitle = i18n.remove || "Remove";
     row.innerHTML = `
       <div class="combobox relative flex-1" data-source="items" data-name="item_id">
         <input type="hidden" name="item_id[]" ${itemId ? 'value="' + itemId + '"' : ""} required />
-        <input type="text" class="combobox-input w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
-               placeholder="Search item..." autocomplete="off" value="${label ? String(label).replace(/"/g, "&quot;") : ""}" />
-        <div class="combobox-menu hidden absolute z-10 left-0 right-0 mt-1 max-h-40 overflow-auto bg-white border border-slate-200 rounded-lg shadow-lg"></div>
+        <input type="text" class="combobox-input w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-950 text-sm"
+               placeholder="${searchPh.replace(/"/g, "&quot;")}" autocomplete="off" value="${label ? String(label).replace(/"/g, "&quot;") : ""}" />
+        <div class="combobox-menu hidden absolute z-10 left-0 right-0 mt-1 max-h-40 overflow-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg"></div>
       </div>
       <input type="number" name="quantity[]" min="1" value="${qty || 1}" required
-             class="w-24 px-3 py-2 rounded-lg border border-slate-300 text-sm" placeholder="Qty" />
-      <button type="button" class="p-2 text-red-600 hover:bg-red-50 rounded-lg remove-line" title="Remove">
+             class="w-24 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-950 text-sm" placeholder="${qtyPh.replace(/"/g, "&quot;")}" />
+      <button type="button" class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg remove-line" title="${removeTitle.replace(/"/g, "&quot;")}">
         <i data-lucide="trash-2" class="w-4 h-4"></i>
       </button>
     `;
@@ -64,7 +69,7 @@
   function resetForm() {
     form.reset();
     form.action = window.TABLE_CREATE_URL;
-    title.textContent = "Add record";
+    title.textContent = i18n.addRecord || "Add record";
     // Clear relation hidden values / labels
     form.querySelectorAll(".combobox").forEach((box) => {
       if (box.setValue) box.setValue("");
@@ -108,7 +113,8 @@
       e.stopPropagation();
       const row = JSON.parse(btn.getAttribute("data-row"));
       resetForm();
-      title.textContent = "Edit record #" + row.id;
+      const editTpl = i18n.editRecord || "Edit record #{id}";
+      title.textContent = editTpl.replace("{id}", row.id).replace("#{id}", "#" + row.id);
       form.action = window.TABLE_UPDATE_URL.replace("/0/", "/" + row.id + "/");
       fillForm(row);
       openModal();

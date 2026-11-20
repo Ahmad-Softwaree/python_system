@@ -35,7 +35,7 @@ from services import (
     search_filter,
     set_order_status,
 )
-from table_meta import OPTION_SOURCES, TABLES, nav_tables
+from table_meta import OPTION_SOURCES, TABLES, nav_tables, translate_columns, translate_fields
 
 
 def create_app():
@@ -202,7 +202,9 @@ def register_routes(app):
         pager = pagination_urls(endpoint, pagination.page, pagination.pages or 1, q=q)
         view_columns = list(meta["view_columns"])
         if deleted_mode:
-            view_columns = view_columns + [{"key": "deleted_at", "label": "Deleted At"}]
+            view_columns = view_columns + [{"key": "deleted_at", "label_key": "table.deleted_at"}]
+        view_columns = translate_columns(view_columns)
+        fields = translate_fields(meta["fields"])
 
         return render_template(
             "table.html",
@@ -213,7 +215,7 @@ def register_routes(app):
                 else t(meta.get("title_key", "table." + name))
             ),
             view_columns=view_columns,
-            fields=meta["fields"],
+            fields=fields,
             rows=rows,
             q=q,
             pager=pager,
