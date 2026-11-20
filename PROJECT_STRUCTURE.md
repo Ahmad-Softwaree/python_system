@@ -2,7 +2,7 @@
 
 This document explains **every folder and file** in the Postal System project: what it is for, and how it fits into the big picture. Use it when presenting to your teacher.
 
-**Current stack:** Flask · Flask-SQLAlchemy (ORM) · MySQL · Matplotlib/Seaborn · Tailwind CSS (CDN) · Lucide icons
+**Current stack:** Flask · Flask-SQLAlchemy (ORM) · MySQL · Matplotlib/Seaborn · custom i18n (EN/AR/CKB) · Tailwind CSS (CDN) · Lucide icons
 
 **Default local URL:** http://localhost:3000  
 **Default DB name (from `.env`):** `python_postal`
@@ -15,16 +15,18 @@ This document explains **every folder and file** in the Postal System project: w
 Browser
    │
    ▼
-app.py  (routes: dashboard, tables, CRUD, deleted, orders status, stock history, APIs)
+app.py  (routes: dashboard, settings, tables, CRUD, deleted, stock history, report APIs)
    │
-   ├── table_meta.py   → columns, search, form fields, relation combobox sources
-   ├── services.py     → search, pagination, forms, IQD format, joins, stock logic
-   ├── models.py       → SQLAlchemy ORM classes (MySQL tables)
-   ├── extensions.py   → shared `db` object
-   ├── config.py       → reads .env → MySQL connection string
-   ├── charts/         → one chart at a time via /api/chart/<id>
-   └── templates/      → Jinja2 + Tailwind
-            └── static/js → sidebar, search debounce, combobox, confirm, dashboard, table modal
+   ├── i18n/           → t(), localized(), lang/theme cookies, translations
+   ├── table_meta.py   → columns, search, form fields, label_key → t()
+   ├── services.py     → search, pagination, forms, IQD, joins, stock logic
+   ├── models.py       → ORM (trilang text columns + Rating + Feedback)
+   ├── extensions.py   → shared `db`
+   ├── config.py       → .env → MySQL URI (utf8mb4)
+   ├── charts/
+   │     ├── reports.py   → filtered business reports (dashboard)
+   │     └── generate.py  → lecture-style charts (optional / catalog)
+   └── templates/ + static/js
 ```
 
 **Soft delete:** rows are not removed from MySQL.  
@@ -33,7 +35,11 @@ app.py  (routes: dashboard, tables, CRUD, deleted, orders status, stock history,
 - Deleted pages → `deleted_at IS NOT NULL`  
 - Restore → `deleted_at = NULL`
 
-**Money:** all prices/revenue are Iraqi Dinar, shown as e.g. `450,000 IQD`.
+**Money:** prices/revenue are Iraqi Dinar, shown as e.g. `450,000 IQD`.
+
+**Languages:** UI via `t('key')`; DB text via `name_en` / `name_ar` / `name_ckb` (+ similar for description, title, body, comment, …) and `localized(obj)`.
+
+**Theme:** light / dark via cookie `postal_theme` + Tailwind `class` dark mode.
 
 ---
 
@@ -41,56 +47,74 @@ app.py  (routes: dashboard, tables, CRUD, deleted, orders status, stock history,
 
 | File | Role |
 |------|------|
-| **`app.py`** | Flask app factory + all routes: dashboard, generic table CRUD, soft-delete/restore, order status buttons, stock history page, `/api/chart/<id>`, `/api/options/<source>`. Runs on port **3000**. |
-| **`config.py`** | Loads `.env` (`python-dotenv`) and builds `SQLALCHEMY_DATABASE_URI` (`mysql+pymysql://…`). Also `PER_PAGE` for pagination. |
-| **`extensions.py`** | Shared `SQLAlchemy()` instance (`db`). Separate file avoids circular imports between `app.py` and `models.py`. |
-| **`models.py`** | ORM models for every table + `SoftDeleteMixin`, `OrderItem`, `StockHistory`, `ORDER_STATUSES`. Each model has `to_dict()`. |
-| **`table_meta.py`** | UI registry: `view_columns` (joined display names), `search`, `fields` (including `relation` comboboxes), `OPTION_SOURCES` for `/api/options/…`. |
-| **`services.py`** | Helpers: form parsing, search filter, pagination URLs, `format_iqd()`, `enrich_row()` (joins → names), order multi-item apply, stock adjust / cancel restore / status changes. |
-| **`seed.py`** | Hard-resets MySQL tables (FK checks off on same connection), `create_all()`, inserts seed arrays, writes initial stock-history rows. Run: `python seed.py`. |
-| **`requirements.txt`** | pip packages: Flask, Flask-SQLAlchemy, PyMySQL, dotenv, matplotlib, seaborn, pandas, numpy, … |
-| **`.env`** | Local secrets (DB password, DB name). **Gitignored** — each developer copies from `.env.example`. |
-| **`.env.example`** | Committed template for `.env` (`MYSQL_DATABASE=python_postal`, etc.). |
-| **`.gitignore`** | Ignores `__pycache__/`, `.env`, virtualenvs, logs. |
-| **`README.md`** | Public install & run guide for GitHub / classmates. |
-| **`PROJECT_STRUCTURE.md`** | This file — architecture notes for presentation. |
+| **`app.py`** | Flask factory + routes: dashboard, settings (lang/theme), table CRUD, soft-delete/restore, order status, stock history, `/api/report/<key>`, `/api/options/<source>`. Port **3000**. |
+| **`config.py`** | Loads `.env`; builds `SQLALCHEMY_DATABASE_URI` with `charset=utf8mb4`; `PER_PAGE`, `SECRET_KEY`. |
+| **`extensions.py`** | Shared `SQLAlchemy()` instance (`db`). |
+| **`models.py`** | ORM models + `SoftDeleteMixin`, `OrderItem`, `StockHistory`, `Rating`, `Feedback`, `ORDER_STATUSES`. Text fields are trilang where users see names/titles. |
+| **`table_meta.py`** | UI registry: `view_columns` / `fields` with `label_key`, trilang form fields, `OPTION_SOURCES`, `translate_columns` / `translate_fields`, `nav_tables()`. |
+| **`services.py`** | Form parsing, search, pagination, `format_iqd()`, `enrich_row()` (uses `localized()` for joined names), order multi-item + stock. |
+| **`seed.py`** | Hard-resets tables, inserts `data/*` expanded to trilang via `i18n.db_names.expand_row`, generates 500+ orders, ratings, feedbacks, stock history. |
+| **`requirements.txt`** | Flask, Flask-SQLAlchemy, PyMySQL, dotenv, matplotlib, seaborn, pandas, numpy, cryptography, … |
+| **`.env`** | Local secrets (gitignored). |
+| **`.env.example`** | Template (`MYSQL_DATABASE=python_postal`, …). |
+| **`.gitignore`** | `__pycache__/`, `.env`, virtualenvs, … |
+| **`README.md`** | Install & run guide. |
+| **`PROJECT_STRUCTURE.md`** | This file. |
+
+---
+
+## `i18n/` — multilingual support (like React i18n, for Flask)
+
+| File | Role |
+|------|------|
+| **`__init__.py`** | `t(key)`, `localized(obj, base)`, `get_locale()` / `get_theme()`, cookie names, `init_i18n(app)` (before_request + context processor). |
+| **`translations.py`** | UI catalogs for `en`, `ar`, `ckb` (nav, tables, columns, reports, forms, …). |
+| **`db_names.py`** | EN→AR/CKB maps for seed strings + `expand_row()` / `trilang()` helpers. |
+
+**Compared to React i18next:**
+
+| React | This project |
+|-------|----------------|
+| `t('nav.dashboard')` | Same: `t('nav.dashboard')` in Jinja/Python |
+| JSON locales | Dicts in `translations.py` |
+| Language store | Cookie `postal_lang` + session |
+| DB content often separate | Trilang columns + `localized()` |
 
 ---
 
 ## `data/` — seed arrays only
 
-These Python lists of dicts are **not** the live database. `seed.py` loads them into MySQL.
+Python lists of dicts (English source strings). `seed.py` expands text fields to `*_en` / `*_ar` / `*_ckb` before insert.
 
 | File | Contains |
 |------|----------|
-| `__init__.py` | Makes `data` a package (`from data.roles import roles`). |
-| `roles.py` | Admin roles (Super Admin, Post Manager, …) |
-| `provinces.py` | Provinces (Erbil, Sulaymaniyah, …) |
+| `__init__.py` | Package marker |
+| `roles.py` | Admin roles |
+| `provinces.py` | Provinces |
 | `cities.py` | Cities → `province_id` |
-| `streets.py` | Streets + postal codes → `city_id` |
-| `posts.py` | Post offices (capacity, staff) |
-| `drivers.py` | Drivers (no post_id — vehicle, deliveries, rating) |
-| `merchants.py` | Merchants (no category — city, phone, revenue in IQD) |
-| `admins.py` | Admins → `role_id` (no post_id) |
-| `item_types.py` | Item categories (name + description only) |
-| `items.py` | Products → type + merchant; **price in IQD**; stock |
-| `orders.py` | Order headers (merchant, driver, post, city, street, total, status, …) |
-| `order_items.py` | Line items: many rows per order (`order_id`, `item_id`, qty, unit price, line total) |
+| `streets.py` | Streets + postal codes |
+| `posts.py` | Post offices |
+| `drivers.py` | Drivers (vehicle, deliveries, rating) |
+| `merchants.py` | Merchants (city, phone, revenue IQD) |
+| `admins.py` | Admins → `role_id` |
+| `item_types.py` | Categories |
+| `items.py` | Products (price IQD, stock) |
+| `orders.py` / `order_items.py` | Optional static samples (live seed mostly generates orders) |
+| `feedbacks.py` | Feedback title + body samples |
 
 **Presentation tip:** seed data stays in Git; live data lives in MySQL.
 
 ---
 
-## `charts/` — dashboard visualizations
+## `charts/` — visualizations
 
 | File | Role |
 |------|------|
-| `__init__.py` | Exports `get_chart_catalog`, `build_chart_by_id`, `build_all_charts`. |
-| `generate.py` | Builds lecture charts with Matplotlib/Seaborn from **active** MySQL rows. Dashboard loads **one chart at a time** via API (not all at once). PNG → base64 for `<img src="data:image/png;base64,…">`. Uses `Agg` backend (no GUI window). |
+| `__init__.py` | Exports report + lecture chart helpers. |
+| **`reports.py`** | **Main dashboard:** filtered reports (`orders`, `revenue`, `delivery`, `inventory`, `ratings`, `correlations`). Titles/lectures/summary use `t()`. Data labels use `localized()`. PNG → base64. |
+| `generate.py` | Lecture chart catalog (bar, pie, scatter, box, violin, radar, …) from active MySQL rows — available if needed; dashboard UX is report-based. |
 
-**Chart types:** bar, grouped bar, horizontal bar, pie, donut, line, area, histogram, scatter, scatter+trend, bubble, box, violin, heatmap, count plot, KDE, radar.
-
-**Dashboard UX:** buttons on `/` → `GET /api/chart/<id>` → show that chart only (cached in the browser for the session).
+**Dashboard UX:** report buttons + shared filters → `GET /api/report/<key>?…` → several charts + summary cards.
 
 ---
 
@@ -98,11 +122,12 @@ These Python lists of dicts are **not** the live database. `seed.py` loads them 
 
 | File | Role |
 |------|------|
-| `base.html` | Layout: collapsible sidebar, Tailwind CDN, Lucide icons, flash messages. Child pages `{% extends "base.html" %}`. |
-| `dashboard.html` | Stat cards (revenue as IQD) + chart button strip + single chart panel. |
-| `table.html` | Generic table for active **and** deleted modes: live search, pagination, joined name columns, Add/Edit modal, relation comboboxes, custom delete/restore confirm modal, order multi-item lines, status switch buttons. |
-| `deleted_hub.html` | Cards per table with soft-deleted counts → `/deleted/<name>`. |
-| `stock_history.html` | Read-only stock movements for one item (`/items/<id>/stock-history`). |
+| `base.html` | Layout: sidebar (nav + theme/lang), mobile drawer, dark mode, cards/animations, flash messages, Lucide. |
+| `dashboard.html` | Stat cards, filters, report buttons, chart panels. |
+| `settings.html` | Full settings page for theme + language. |
+| `table.html` | Generic table: search, pagination, Add/Edit modal, comboboxes, confirm modal, order lines, status buttons. |
+| `deleted_hub.html` | Soft-deleted counts per table. |
+| `stock_history.html` | Read-only stock movements for one item. |
 
 ---
 
@@ -110,14 +135,14 @@ These Python lists of dicts are **not** the live database. `seed.py` loads them 
 
 | File | Role |
 |------|------|
-| `app.js` | Collapsible sidebar; state in `data-collapsed` + `localStorage`; toggle always clickable. |
-| `search.js` | Live search: `oninput` → **1 second debounce** → reload `?q=&page=1`. Keeps focus after reload until the user blurs the input. Pagination keeps the same `q`. |
-| `confirm.js` | Custom Delete / Restore confirm modal (no `window.alert` / `confirm`). |
-| `combobox.js` | Searchable FK select: type → `/api/options/<source>?q=` → click to set hidden id. |
-| `table.js` | Add/Edit modal; fills relation fields; for **orders**, dynamic multi-item lines (`item_id[]` + `quantity[]`). |
-| `dashboard.js` | Chart buttons → fetch `/api/chart/<id>` → show one chart (with loading state + cache). |
+| `app.js` | Desktop sidebar collapse + mobile drawer; sync theme to `localStorage`. |
+| `search.js` | Live search with **1s debounce**; keeps focus; pagination keeps `q`. |
+| `confirm.js` | Custom Delete / Restore modal. |
+| `combobox.js` | Searchable FK select via `/api/options/<source>?q=`. |
+| `table.js` | Add/Edit modal; multilang titles via `window.TABLE_I18N`; order multi-item lines. |
+| `dashboard.js` | Report buttons + filters → `/api/report/<key>`; summary cards + chart grid. |
 
-Styling: **Tailwind CSS via CDN** in `base.html` (no npm build).
+Styling: **Tailwind CSS via CDN** in `base.html` (no npm build). Dark mode: `darkMode: 'class'`.
 
 ---
 
@@ -125,55 +150,60 @@ Styling: **Tailwind CSS via CDN** in `base.html` (no npm build).
 
 | URL | Purpose |
 |-----|---------|
-| `/` | Dashboard + chart buttons |
-| `/api/chart/<id>` | JSON: one rendered chart (base64 PNG) |
-| `/api/options/<source>` | JSON: `{id, label}` list for comboboxes |
+| `/` | Dashboard (stats + filters + reports) |
+| `/settings` | Theme + language page |
+| `/settings/lang/<en\|ar\|ckb>` | Set language cookie + redirect |
+| `/settings/theme/<light\|dark>` | Set theme cookie + redirect |
+| `/api/report/<key>` | JSON: report title, summary, chart images |
+| `/api/options/<source>` | JSON: `{id, label}` (localized, search all trilang names) |
 | `/table/<name>` | Active rows: search, paginate, CRUD |
 | `/table/<name>/create` | POST create |
 | `/table/<name>/<id>/update` | POST update |
 | `/table/<name>/<id>/delete` | POST soft-delete |
-| `/orders/<id>/status` | POST switch order status (Pending / In Transit / Delivered / Cancelled) |
+| `/orders/<id>/status` | POST status switch |
 | `/deleted` | Soft-deleted hub |
 | `/deleted/<name>` | Soft-deleted rows + restore |
 | `/deleted/<name>/<id>/restore` | POST restore |
-| `/items/<id>/stock-history` | Read-only stock log for that item |
+| `/items/<id>/stock-history` | Stock log for that item |
 
-`<name>` examples: `roles`, `provinces`, `cities`, `streets`, `posts`, `drivers`, `merchants`, `admins`, `item_types`, `items`, `orders`.
+`<name>` examples: `roles`, `provinces`, `cities`, `streets`, `posts`, `drivers`, `merchants`, `admins`, `item_types`, `items`, `orders`, `ratings`, `feedbacks`.
 
 ---
 
 ## Database tables (MySQL)
 
-Created by `seed.py` / `db.create_all()` from ORM models:
+Created by `seed.py` / `db.create_all()`:
 
 | Table | Notes |
 |-------|--------|
-| `roles` | Admin roles |
-| `provinces` | Soft-deletable |
-| `cities` | → province |
-| `streets` | → city |
-| `posts` | → city, street |
-| `drivers` | No post_id |
-| `merchants` | No category; revenue in IQD |
-| `admins` | → `role_id` (not post_id) |
-| `item_types` | No avg weight |
-| `items` | → type + merchant; price IQD; stock; **no weight** |
-| `orders` | Header only (no single item_id/qty) |
+| `roles` | Trilang name + description |
+| `provinces` | Trilang name; soft-deletable |
+| `cities` | → province; trilang name |
+| `streets` | → city; trilang name |
+| `posts` | → city, street; trilang name |
+| `drivers` | Trilang name + vehicle_type |
+| `merchants` | Trilang name; revenue IQD |
+| `admins` | → role; trilang name |
+| `item_types` | Trilang name + description |
+| `items` | → type + merchant; trilang name; price IQD; stock |
+| `orders` | Header only |
 | `order_items` | Many items per order |
-| `stock_history` | Read-only movements (sale / cancel / edit) |
+| `stock_history` | Read-only movements |
+| **`ratings`** | → `item_id`; score 1–5; trilang comment |
+| **`feedbacks`** | Trilang title + body (not tied to an item) |
 
-Most business tables have **`deleted_at`**.  
-`order_items` and `stock_history` are supporting tables (history is read-only in the UI).
+Most business tables have **`deleted_at`**.
 
 ### Domain rules worth mentioning
 
 1. **One order → many items** via `order_items`.  
 2. **Creating / updating an order** subtracts stock and writes `stock_history`.  
 3. **Status → Cancelled** (or soft-delete order) restores stock.  
-4. **Un-cancel** subtracts stock again.  
-5. **Tables show joined names** (city name, role name, …), not raw FK ids.  
-6. **FK form fields** use searchable comboboxes, not typed ids.  
-7. **Click an item row** → stock history page.
+4. **Tables show localized joined names**, not raw FK ids.  
+5. **FK fields** use searchable comboboxes.  
+6. **Click an item row** → stock history.  
+7. **Ratings** feed the Ratings + Heatmap reports.  
+8. **UI + DB multilingual** with cookie language and trilang columns.
 
 ---
 
@@ -190,33 +220,38 @@ Order.query.filter(Order.deleted_at.is_(None)).paginate(...)
 ```
 
 ### 3. One generic table page
-`table_meta.py` drives columns/forms. Special cases: `orders` (multi-item + status buttons), `items` (row link to stock history).
+`table_meta.py` drives columns/forms (`label_key` → `t()`). Special cases: `orders` (multi-item + status), `items` (row → stock history).
 
 ### 4. Application factory (`create_app`)
-`seed.py` creates an app context without calling `app.run()`.
+`seed.py` and tests create an app context without calling `app.run()`.
 
-### 5. Charts on demand
-Catalog of titles on the dashboard; images rendered only when a button is clicked (`/api/chart/<id>`).
+### 5. Report-based dashboard
+Filters apply to whichever report is selected; `/api/report/<key>` returns multiple charts.
 
-### 6. Search + pagination together
+### 6. i18n without React
+Custom `t()` + cookie locale for chrome; trilang DB columns for content (similar idea to React i18n + multilingual CMS fields).
+
+### 7. Search + pagination together
 Debounced search sets `?q=` and resets `page=1`. Prev/Next keep `q`.
 
-### 7. Stock history
+### 8. Stock history
 Every stock change is logged (`change_qty`, before/after, reason, optional `order_id`).
 
 ---
 
 ## Suggested presentation order
 
-1. **Dashboard** — stats in IQD, click chart buttons one-by-one.  
-2. **Table** — live search (focus stays), pagination, combobox Add/Edit.  
-3. **Orders** — multi-item form, status buttons, stock side-effect.  
-4. **Items** — click row → stock history.  
-5. **Soft delete** → Deleted hub → restore (custom modal).  
-6. **`models.py`** — SoftDeleteMixin, Order + OrderItem, StockHistory, Role.  
-7. **`table_meta.py` + `services.py`** — generic UI + enrich/joins + stock helpers.  
-8. **`seed.py` + `data/`** — how sample data enters MySQL.  
-9. **`README.md`** — anyone can clone and run.
+1. **Dashboard** — IQD stats, filters, report tabs (Orders → Heatmap).  
+2. **Settings / sidebar** — switch EN ↔ AR ↔ CKB and light ↔ dark (RTL).  
+3. **Table** — localized headers; Add form with `name_en` / `name_ar` / `name_ckb`.  
+4. **Orders** — multi-item form, status buttons, stock side-effect.  
+5. **Ratings & Feedback** — CRUD + Ratings report.  
+6. **Items** — click row → stock history.  
+7. **Soft delete** → Deleted hub → restore.  
+8. **`models.py` + `i18n/`** — SoftDeleteMixin, Rating/Feedback, trilang fields, `t` / `localized`.  
+9. **`charts/reports.py`** — how filtered reports are built.  
+10. **`seed.py` + `data/`** — how sample multilang data enters MySQL.  
+11. **`README.md`** — clone and run.
 
 ---
 
@@ -236,8 +271,13 @@ Data Analysis/
 ├── PROJECT_STRUCTURE.md
 ├── .env.example
 ├── .gitignore
+├── i18n/
+│   ├── __init__.py
+│   ├── translations.py
+│   └── db_names.py
 ├── charts/
 │   ├── __init__.py
+│   ├── reports.py
 │   └── generate.py
 ├── data/
 │   ├── __init__.py
@@ -252,10 +292,12 @@ Data Analysis/
 │   ├── item_types.py
 │   ├── items.py
 │   ├── orders.py
-│   └── order_items.py
+│   ├── order_items.py
+│   └── feedbacks.py
 ├── templates/
 │   ├── base.html
 │   ├── dashboard.html
+│   ├── settings.html
 │   ├── table.html
 │   ├── deleted_hub.html
 │   └── stock_history.html
