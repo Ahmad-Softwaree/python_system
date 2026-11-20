@@ -226,6 +226,7 @@ class Item(SoftDeleteMixin, db.Model):
     item_type = db.relationship("ItemType")
     merchant = db.relationship("Merchant")
     stock_history = db.relationship("StockHistory", back_populates="item", lazy="dynamic")
+    ratings = db.relationship("Rating", back_populates="item", lazy="dynamic")
 
     def to_dict(self):
         return {
@@ -235,6 +236,53 @@ class Item(SoftDeleteMixin, db.Model):
             "merchant_id": self.merchant_id,
             "price": self.price,
             "stock": self.stock,
+            "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None,
+        }
+
+
+class Rating(SoftDeleteMixin, db.Model):
+    """
+    Customer rating for an item (1–5 stars).
+    Joined to items via item_id — used in the Ratings dashboard report.
+    """
+
+    __tablename__ = "ratings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    item_id = db.Column(db.Integer, db.ForeignKey("items.id"), nullable=False)
+    score = db.Column(db.Integer, nullable=False, default=5)  # 1..5
+    comment = db.Column(db.String(255), nullable=False, default="")
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    item = db.relationship("Item", back_populates="ratings")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "item_id": self.item_id,
+            "score": self.score,
+            "comment": self.comment,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None,
+        }
+
+
+class Feedback(SoftDeleteMixin, db.Model):
+    """General feedback messages (title + body) — not tied to a specific item."""
+
+    __tablename__ = "feedbacks"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    body = db.Column(db.Text, nullable=False, default="")
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "body": self.body,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
             "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None,
         }
 

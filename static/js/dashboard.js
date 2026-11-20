@@ -96,13 +96,16 @@
       summaryEl.innerHTML = "";
       return;
     }
-    const cards = [
-      ["Orders", summary.orders],
-      ["Delivered", summary.delivered],
-      ["Cancelled", summary.cancelled],
-      ["Revenue", summary.revenue],
-      ["Avg days", summary.avg_delivery_days],
-    ];
+    // Prefer explicit cards (e.g. Ratings report); else classic order KPIs.
+    const cards = Array.isArray(summary.cards)
+      ? summary.cards.map((c) => [c.label, c.value])
+      : [
+          ["Orders", summary.orders],
+          ["Delivered", summary.delivered],
+          ["Cancelled", summary.cancelled],
+          ["Revenue", summary.revenue],
+          ["Avg days", summary.avg_delivery_days],
+        ];
     summaryEl.innerHTML = cards
       .map(
         ([label, value]) => `

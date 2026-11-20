@@ -18,7 +18,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-from models import City, Driver, Item, ItemType, Merchant, Order, OrderItem, Post, Province
+import pandas as pd
+
+from models import City, Driver, Item, ItemType, Merchant, Order, OrderItem, Post, Province, Rating
 
 sns.set_theme(style="whitegrid", palette="viridis")
 COLORS = ["#0d7377", "#14919b", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51", "#264653", "#457b9d"]
@@ -491,11 +493,249 @@ def build_inventory_report(filters: dict):
     }
 
 
+def build_ratings_report(filters: dict):
+    """Item ratings report: average by item, score distribution, top/bottom rated."""
+    orders = _filtered_orders(filters)
+    _, _, _, _, _, items, _ = _lookups()
+
+    ratings = Rating.query.filter(Rating.deleted_at.is_(None)).all()
+    if not ratings:
+        empty = _empty_chart("No ratings yet")
+        return {
+            "key": "ratings",
+            "title": "Ratings Report",
+            "description": "Customer scores for items (1–5 stars).",
+            "summary": {
+                "cards": [
+                    {"label": "Ratings", "value": 0},
+                    {"label": "Avg score", "value": "-"},
+                    {"label": "Items rated", "value": 0},
+                    {"label": "Orders (filter)", "value": len(orders)},
+                ]
+            },
+            "charts": [
+                {"title": "No ratings", "lecture": "Add ratings from the Ratings table", "image": empty},
+            ],
+        }
+
+    scores_by_item = defaultdict(list)
+    all_scores = []
+    for r in ratings:
+        scores_by_item[r.item_id].append(r.score)
+        all_scores.append(r.score)
+
+    avg_by_item = {
+        item_id: float(np.mean(vals)) for item_id, vals in scores_by_item.items()
+    }
+    avg_sorted = sorted(avg_by_item.items(), key=lambda x: x[1], reverse=True)
+    top = avg_sorted[:10]
+    bottom = list(reversed(avg_sorted[-10:])) if len(avg_sorted) >= 2 else avg_sorted
+
+    score_counts = Counter(all_scores)
+    score_labels = [str(s) for s in range(1, 6)]
+    score_values = [score_counts.get(s, 0) for s in range(1, 6)]
+    avg_score = round(float(np.mean(all_scores)), 2)
+
+    fig, ax = plt.subplots(figsize=(7.5, 4))
+    ax.bar(score_labels, score_values, color=COLORS[0])
+    ax.set_title("Rating Score Distribution (1–5)")
+    ax.set_xlabel("Stars")
+    ax.set_ylabel("Count")
+    fig.tight_layout()
+    dist_img = _to_base64(fig)
+
+    charts = [
+        {
+            "title": "Average Rating by Item (Horizontal Bar)",
+            "lecture": "Highest-rated products first",
+            "image": _bar(
+                [items.get(i).name if items.get(i) else f"#{i}" for i, _ in top],
+                [v for _, v in top],
+                "Top Rated Items (Avg Stars)",
+                "Avg rating",
+                color=COLORS[3],
+                horizontal=True,
+            ),
+        },
+        {
+            "title": "Lowest Rated Items (Horizontal Bar)",
+            "lecture": "Products that may need attention",
+            "image": _bar(
+                [items.get(i).name if items.get(i) else f"#{i}" for i, _ in bottom],
+                [v for _, v in bottom],
+                "Lowest Rated Items",
+                "Avg rating",
+                color=COLORS[5],
+                horizontal=True,
+            ),
+        },
+        {
+            "title": "Rating Score Distribution (Bar)",
+            "lecture": "How many 1★ … 5★ reviews exist",
+            "image": dist_img,
+        },
+        {
+            "title": "Ratings Share by Score (Donut)",
+            "lecture": "Proportion of each star rating",
+            "image": _pie(score_labels, score_values, "Share of Star Ratings", donut=True),
+        },
+    ]
+    return {
+        "key": "ratings",
+        "title": "Ratings Report",
+        "description": f"Item star ratings. Overall average: {avg_score}/5 from {len(all_scores)} reviews.",
+        "summary": {
+            "cards": [
+                {"label": "Ratings", "value": len(all_scores)},
+                {"label": "Avg score", "value": f"{avg_score}/5"},
+                {"label": "Items rated", "value": len(avg_by_item)},
+                {"label": "5-star count", "value": score_counts.get(5, 0)},
+                {"label": "Orders (filter)", "value": len(orders)},
+            ]
+        },
+        "charts": charts,
+    }
+
+
+def build_correlations_report(filters: dict):
+    """
+    Heatmap report connecting per-item:
+    avg_rating, sell_price (IQD), quantity sold, order_lines, revenue.
+    """
+    orders = [o for o in _filtered_orders(filters) if o.status != "Cancelled"]
+    order_ids = [o.id for o in orders]
+    _, _, _, _, _, items, _ = _lookups()
+
+    qty_by_item = defaultdict(int)
+    revenue_by_item = defaultdict(float)
+    orders_by_item = defaultdict(set)
+    if order_ids:
+        lines = OrderItem.query.filter(OrderItem.order_id.in_(order_ids)).all()
+        for line in lines:
+            qty_by_item[line.item_id] += line.quantity
+            revenue_by_item[line.item_id] += line.line_total
+            orders_by_item[line.item_id].add(line.order_id)
+
+    ratings = Rating.query.filter(Rating.deleted_at.is_(None)).all()
+    scores_by_item = defaultdict(list)
+    for r in ratings:
+        scores_by_item[r.item_id].append(r.score)
+
+    rows = []
+    for item_id, item in items.items():
+        scores = scores_by_item.get(item_id) or []
+        rows.append(
+            {
+                "item": item.name,
+                "avg_rating": float(np.mean(scores)) if scores else np.nan,
+                "sell_price": float(item.price),
+                "quantity_sold": int(qty_by_item.get(item_id, 0)),
+                "order_count": len(orders_by_item.get(item_id, set())),
+                "revenue": float(revenue_by_item.get(item_id, 0.0)),
+                "rating_count": len(scores),
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    metric_cols = ["avg_rating", "sell_price", "quantity_sold", "order_count", "revenue"]
+    corr = df[metric_cols].corr()
+
+    fig, ax = plt.subplots(figsize=(7.2, 5.8))
+    sns.heatmap(
+        corr,
+        annot=True,
+        fmt=".2f",
+        cmap="viridis",
+        square=True,
+        ax=ax,
+        vmin=-1,
+        vmax=1,
+        linewidths=0.5,
+    )
+    ax.set_title("Item Metrics Correlation Heatmap")
+    fig.tight_layout()
+    corr_img = _to_base64(fig)
+
+    # Second heatmap: top items × normalized metrics (nice visual “connect together”)
+    plot_df = df.dropna(subset=["avg_rating"]).copy()
+    if plot_df.empty:
+        plot_df = df.copy()
+    plot_df = plot_df.sort_values("quantity_sold", ascending=False).head(12)
+    heat_cols = ["avg_rating", "sell_price", "quantity_sold", "order_count", "revenue"]
+    matrix = plot_df.set_index("item")[heat_cols].astype(float)
+    # Min-max normalize each column so price and quantity can share a scale
+    norm = (matrix - matrix.min()) / (matrix.max() - matrix.min()).replace(0, 1)
+
+    fig2, ax2 = plt.subplots(figsize=(8.5, 5.5))
+    sns.heatmap(norm, annot=True, fmt=".2f", cmap="YlGnBu", ax=ax2, linewidths=0.4)
+    ax2.set_title("Top Items × Metrics (Normalized Heatmap)")
+    ax2.set_xlabel("Metric")
+    ax2.set_ylabel("Item")
+    fig2.tight_layout()
+    items_heat_img = _to_base64(fig2)
+
+    # Scatter: sell price vs avg rating (size = quantity)
+    scatter_df = df.dropna(subset=["avg_rating"])
+    if not scatter_df.empty:
+        fig3, ax3 = plt.subplots(figsize=(7.5, 4.5))
+        sizes = (scatter_df["quantity_sold"].clip(lower=1) ** 0.7) * 8
+        ax3.scatter(
+            scatter_df["sell_price"],
+            scatter_df["avg_rating"],
+            s=sizes,
+            c=COLORS[1],
+            alpha=0.65,
+            edgecolors=COLORS[0],
+        )
+        ax3.set_title("Sell Price vs Rating (bubble = quantity sold)")
+        ax3.set_xlabel("Sell price (IQD)")
+        ax3.set_ylabel("Avg rating")
+        fig3.tight_layout()
+        scatter_img = _to_base64(fig3)
+    else:
+        scatter_img = _empty_chart("Need ratings to plot price vs score")
+
+    rated = int(df["avg_rating"].notna().sum())
+    return {
+        "key": "correlations",
+        "title": "Correlations & Heatmap",
+        "description": "Connects avg rating, sell price, quantity sold, order count and revenue per item.",
+        "summary": {
+            "cards": [
+                {"label": "Items", "value": len(df)},
+                {"label": "With ratings", "value": rated},
+                {"label": "Orders (filter)", "value": len(orders)},
+                {"label": "Qty sold", "value": int(df["quantity_sold"].sum())},
+                {"label": "Revenue", "value": f"{df['revenue'].sum():,.0f} IQD"},
+            ]
+        },
+        "charts": [
+            {
+                "title": "Correlation Heatmap",
+                "lecture": "Pearson links between rating, price, qty, orders, revenue (−1…+1)",
+                "image": corr_img,
+            },
+            {
+                "title": "Items × Metrics Heatmap",
+                "lecture": "Normalized view of top sold items across key metrics",
+                "image": items_heat_img,
+            },
+            {
+                "title": "Price vs Rating (Bubble)",
+                "lecture": "Do expensive items get better ratings? Bubble size = qty sold",
+                "image": scatter_img,
+            },
+        ],
+    }
+
+
 REPORT_BUILDERS = {
     "orders": build_orders_report,
     "revenue": build_revenue_report,
     "delivery": build_delivery_report,
     "inventory": build_inventory_report,
+    "ratings": build_ratings_report,
+    "correlations": build_correlations_report,
 }
 
 REPORT_CATALOG = [
@@ -503,6 +743,8 @@ REPORT_CATALOG = [
     {"key": "revenue", "label": "Revenue Report", "description": "IQD revenue by province, city, merchant & month"},
     {"key": "delivery", "label": "Delivery Report", "description": "Delivery speed and status health"},
     {"key": "inventory", "label": "Inventory Report", "description": "Top sold items, categories & low stock"},
+    {"key": "ratings", "label": "Ratings Report", "description": "Item star ratings averages and distribution"},
+    {"key": "correlations", "label": "Heatmap Report", "description": "Rating × price × quantity × orders correlations"},
 ]
 
 

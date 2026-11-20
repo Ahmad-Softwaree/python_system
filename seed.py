@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import random
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from app import create_app
 from extensions import db
@@ -17,6 +17,7 @@ from models import (
     Admin,
     City,
     Driver,
+    Feedback,
     Item,
     ItemType,
     Merchant,
@@ -24,6 +25,7 @@ from models import (
     OrderItem,
     Post,
     Province,
+    Rating,
     Role,
     StockHistory,
     Street,
@@ -38,6 +40,7 @@ from data.merchants import merchants
 from data.admins import admins
 from data.item_types import item_types
 from data.items import items
+from data.feedbacks import feedbacks
 
 # Reproducible “random” data every time you seed.
 RNG = random.Random(42)
@@ -156,6 +159,40 @@ def generate_orders(count: int = ORDER_COUNT):
     return order_rows, order_item_rows, updated_items, updated_merchants, sold
 
 
+RATING_COMMENTS = [
+    "Excellent quality",
+    "Good value for money",
+    "As described",
+    "Packaging could be better",
+    "Fast dispatch",
+    "Would buy again",
+    "Average experience",
+    "Not what I expected",
+    "Perfect for gifts",
+    "Solid product",
+]
+
+
+def generate_ratings(count: int = 400):
+    """Many item ratings (1–5) so the Ratings / Heatmap reports have enough data."""
+    rows = []
+    for i in range(1, count + 1):
+        item = RNG.choice(items)
+        # Slight bias toward higher scores (more realistic reviews)
+        score = RNG.choices([1, 2, 3, 4, 5], weights=[5, 8, 18, 32, 37], k=1)[0]
+        created = datetime.utcnow() - timedelta(days=RNG.randint(0, 400), hours=RNG.randint(0, 23))
+        rows.append(
+            {
+                "id": i,
+                "item_id": item["id"],
+                "score": score,
+                "comment": RNG.choice(RATING_COMMENTS),
+                "created_at": created,
+            }
+        )
+    return rows
+
+
 def seed():
     app = create_app()
     with app.app_context():
@@ -169,6 +206,7 @@ def seed():
         db.create_all()
 
         order_rows, order_item_rows, updated_items, updated_merchants, sold = generate_orders()
+        rating_rows = generate_ratings(400)
 
         db.session.bulk_insert_mappings(Role, roles)
         db.session.bulk_insert_mappings(Province, provinces)
@@ -182,12 +220,20 @@ def seed():
         db.session.bulk_insert_mappings(Item, updated_items)
         db.session.bulk_insert_mappings(Order, order_rows)
         db.session.bulk_insert_mappings(OrderItem, order_item_rows)
+        db.session.bulk_insert_mappings(Rating, rating_rows)
+        feedback_rows = []
+        for fb in feedbacks:
+            feedback_rows.append(
+                {
+                    **fb,
+                    "created_at": datetime.utcnow() - timedelta(days=RNG.randint(0, 200)),
+                }
+            )
+        db.session.bulk_insert_mappings(Feedback, feedback_rows)
         db.session.commit()
 
         # Stock history: one sale row per non-cancelled line item
         history_rows = []
-        # Rebuild approximate before/after from final stock + sold totals
-        # Process lines in order_id order so history looks chronological-ish
         running = {i["id"]: i["stock"] + sold.get(i["id"], 0) for i in updated_items}
         for oi in order_item_rows:
             order = next(o for o in order_rows if o["id"] == oi["order_id"])
@@ -210,7 +256,6 @@ def seed():
             )
 
         if history_rows:
-            # Insert in chunks for speed / packet size
             chunk = 500
             for i in range(0, len(history_rows), chunk):
                 db.session.bulk_insert_mappings(StockHistory, history_rows[i : i + chunk])
@@ -219,7 +264,9 @@ def seed():
         print(
             f"Seed complete: {len(order_rows)} orders, "
             f"{len(order_item_rows)} order lines, "
-            f"{len(history_rows)} stock-history rows."
+            f"{len(history_rows)} stock-history rows, "
+            f"{len(rating_rows)} ratings, "
+            f"{len(feedbacks)} feedbacks."
         )
 
 

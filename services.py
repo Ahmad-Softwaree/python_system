@@ -133,6 +133,8 @@ def enrich_row(table_name, obj):
             parts.append(f"{name} ×{oi.quantity}")
         d["items_summary"] = ", ".join(parts) if parts else "—"
         d["total_price_iqd"] = format_iqd(obj.total_price)
+    elif table_name == "ratings":
+        d["item_name"] = obj.item.name if obj.item else "—"
 
     if "deleted_at" in d and d["deleted_at"]:
         pass

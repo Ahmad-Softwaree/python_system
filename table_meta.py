@@ -11,12 +11,14 @@ from models import (
     Admin,
     City,
     Driver,
+    Feedback,
     Item,
     ItemType,
     Merchant,
     Order,
     Post,
     Province,
+    Rating,
     Role,
     Street,
 )
@@ -225,6 +227,38 @@ TABLES = {
             {"name": "street_id", "label": "Street", "type": "relation", "source": "streets", "required": True},
             {"name": "order_date", "label": "Order Date", "type": "date", "required": True},
             {"name": "delivery_days", "label": "Delivery Days", "type": "number", "required": True},
+        ],
+    },
+    "ratings": {
+        "title": "Ratings",
+        "model": Rating,
+        "view_columns": [
+            {"key": "id", "label": "ID"},
+            {"key": "item_name", "label": "Item"},
+            {"key": "score", "label": "Score"},
+            {"key": "comment", "label": "Comment"},
+            {"key": "created_at", "label": "Created"},
+        ],
+        "search": ["comment"],
+        "fields": [
+            {"name": "item_id", "label": "Item", "type": "relation", "source": "items", "required": True},
+            {"name": "score", "label": "Score (1-5)", "type": "number", "required": True},
+            {"name": "comment", "label": "Comment", "type": "text", "required": False},
+        ],
+    },
+    "feedbacks": {
+        "title": "Feedback",
+        "model": Feedback,
+        "view_columns": [
+            {"key": "id", "label": "ID"},
+            {"key": "title", "label": "Title"},
+            {"key": "body", "label": "Body"},
+            {"key": "created_at", "label": "Created"},
+        ],
+        "search": ["title", "body"],
+        "fields": [
+            {"name": "title", "label": "Title", "type": "text", "required": True},
+            {"name": "body", "label": "Body", "type": "text", "required": True},
         ],
     },
 }
