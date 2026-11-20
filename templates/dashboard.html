@@ -2,47 +2,85 @@
 {% block title %}{{ t('nav.dashboard') }} — {{ t('app.name') }}{% endblock %}
 
 {% block content %}
-<header class="mb-6 animate-fade-up">
-  <h1 class="text-2xl sm:text-3xl font-bold text-brand-dark dark:text-teal-300 tracking-tight">{{ t('dashboard.title') }}</h1>
-  <p class="text-brand-muted dark:text-slate-400 text-sm mt-1">{{ t('dashboard.subtitle') }}</p>
-</header>
+{# Soft page atmosphere #}
+<div class="relative mb-6 animate-fade-up overflow-hidden rounded-3xl border border-teal-100/80 dark:border-teal-900/40 bg-gradient-to-br from-teal-50 via-white to-amber-50/60 dark:from-slate-900 dark:via-slate-900 dark:to-teal-950/40 px-5 py-6 sm:px-7 sm:py-8">
+  <div class="pointer-events-none absolute -top-10 -end-10 w-40 h-40 rounded-full bg-teal-300/25 dark:bg-teal-500/10 blur-2xl"></div>
+  <div class="pointer-events-none absolute -bottom-12 -start-8 w-48 h-48 rounded-full bg-amber-300/20 dark:bg-amber-500/10 blur-2xl"></div>
+  <div class="pointer-events-none absolute top-1/2 end-1/4 w-24 h-24 rounded-full border-2 border-teal-200/50 dark:border-teal-700/40"></div>
+  <div class="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+    <div>
+      <div class="inline-flex items-center gap-2 text-[11px] uppercase tracking-wider text-teal-700 dark:text-teal-300 font-semibold mb-2">
+        <span class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
+        {{ t('app.subtitle') }}
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-brand-dark dark:text-teal-200 tracking-tight">{{ t('dashboard.title') }}</h1>
+      <p class="text-brand-muted dark:text-slate-400 text-sm mt-1 max-w-xl">{{ t('dashboard.subtitle') }}</p>
+    </div>
+    <div class="hidden sm:flex items-center gap-2">
+      <div class="w-12 h-12 rounded-2xl bg-brand text-white grid place-items-center shadow-lg shadow-teal-900/20">
+        <i data-lucide="bar-chart-3" class="w-6 h-6"></i>
+      </div>
+      <div class="w-10 h-10 rounded-full bg-amber-400/90 text-amber-950 grid place-items-center shadow-md">
+        <i data-lucide="sparkles" class="w-5 h-5"></i>
+      </div>
+      <div class="w-9 h-9 rounded-full bg-sky-500/90 text-white grid place-items-center shadow-md">
+        <i data-lucide="truck" class="w-4 h-4"></i>
+      </div>
+    </div>
+  </div>
+</div>
 
 <section class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
   {% set cards = [
-    (stats.orders, t('stat.orders')),
-    (stats.delivered, t('stat.delivered')),
-    (stats.revenue, t('stat.revenue')),
-    (stats.drivers, t('stat.drivers')),
-    (stats.merchants, t('stat.merchants')),
-    (stats.posts, t('stat.posts'))
+    (stats.orders, t('stat.orders'), 'package', 'teal'),
+    (stats.delivered, t('stat.delivered'), 'circle-check', 'emerald'),
+    (stats.revenue, t('stat.revenue'), 'coins', 'amber'),
+    (stats.drivers, t('stat.drivers'), 'truck', 'sky'),
+    (stats.merchants, t('stat.merchants'), 'store', 'orange'),
+    (stats.posts, t('stat.posts'), 'building-2', 'cyan')
   ] %}
-  {% for value, label in cards %}
-  <div class="ui-stat ui-card" style="animation-delay: {{ loop.index0 * 40 }}ms">
-    <div class="text-xl font-bold text-brand dark:text-teal-300">{{ value }}</div>
-    <div class="text-xs text-brand-muted dark:text-slate-400 mt-1">{{ label }}</div>
+  {% for value, label, icon, tone in cards %}
+  <div class="stat-card tone-{{ tone }}" style="animation-delay: {{ loop.index0 * 45 }}ms">
+    <div class="stat-blob"></div>
+    <div class="stat-ring"></div>
+    <div class="relative flex items-start justify-between gap-2">
+      <div class="stat-icon">
+        <i data-lucide="{{ icon }}" class="w-4 h-4"></i>
+      </div>
+      <div class="w-2.5 h-2.5 rounded-full bg-current opacity-40 mt-1"></div>
+    </div>
+    <div class="relative mt-3 text-xl font-bold tracking-tight">{{ value }}</div>
+    <div class="relative text-[11px] mt-1 opacity-75 font-medium">{{ label }}</div>
   </div>
   {% endfor %}
 </section>
 
-<section class="ui-card p-4 md:p-5 mb-5 animate-fade-up" style="animation-delay:80ms">
-  <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-    <h2 class="font-semibold text-brand-dark dark:text-slate-100">{{ t('dashboard.filters') }}</h2>
+<section class="ui-card relative overflow-hidden p-4 md:p-5 mb-5 animate-fade-up" style="animation-delay:80ms">
+  <div class="pointer-events-none absolute -top-8 -end-6 w-28 h-28 rounded-full bg-teal-100/70 dark:bg-teal-900/30"></div>
+  <div class="pointer-events-none absolute bottom-0 start-10 w-16 h-16 rounded-full border border-teal-200/60 dark:border-teal-800/50"></div>
+  <div class="relative flex flex-wrap items-center justify-between gap-3 mb-4">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-teal-100 dark:bg-teal-950 text-brand dark:text-teal-300 grid place-items-center">
+        <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+      </div>
+      <h2 class="font-semibold text-brand-dark dark:text-slate-100">{{ t('dashboard.filters') }}</h2>
+    </div>
     <button type="button" id="filter-reset"
-            class="text-xs px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+            class="text-xs px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-teal-50 dark:hover:bg-teal-950/40 transition">
       {{ t('dashboard.reset') }}
     </button>
   </div>
 
-  <div class="flex flex-wrap gap-2 mb-4">
-    <button type="button" class="preset-btn px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs md:text-sm bg-white dark:bg-slate-900 hover:border-brand transition" data-preset="today">{{ t('dashboard.today') }}</button>
-    <button type="button" class="preset-btn px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs md:text-sm bg-white dark:bg-slate-900 hover:border-brand transition" data-preset="week">{{ t('dashboard.week') }}</button>
-    <button type="button" class="preset-btn px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs md:text-sm bg-white dark:bg-slate-900 hover:border-brand transition" data-preset="month">{{ t('dashboard.month') }}</button>
-    <button type="button" class="preset-btn px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs md:text-sm bg-white dark:bg-slate-900 hover:border-brand transition" data-preset="year">{{ t('dashboard.year') }}</button>
+  <div class="relative flex flex-wrap gap-2 mb-4">
+    <button type="button" class="preset-btn px-3 py-1.5 rounded-full border border-teal-100 dark:border-teal-900 text-xs md:text-sm bg-teal-50/80 dark:bg-teal-950/40 hover:border-brand transition" data-preset="today">{{ t('dashboard.today') }}</button>
+    <button type="button" class="preset-btn px-3 py-1.5 rounded-full border border-teal-100 dark:border-teal-900 text-xs md:text-sm bg-teal-50/80 dark:bg-teal-950/40 hover:border-brand transition" data-preset="week">{{ t('dashboard.week') }}</button>
+    <button type="button" class="preset-btn px-3 py-1.5 rounded-full border border-teal-100 dark:border-teal-900 text-xs md:text-sm bg-teal-50/80 dark:bg-teal-950/40 hover:border-brand transition" data-preset="month">{{ t('dashboard.month') }}</button>
+    <button type="button" class="preset-btn px-3 py-1.5 rounded-full border border-teal-100 dark:border-teal-900 text-xs md:text-sm bg-teal-50/80 dark:bg-teal-950/40 hover:border-brand transition" data-preset="year">{{ t('dashboard.year') }}</button>
   </div>
 
-  {% macro select_cls() %}mt-1 w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-sm bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand/40{% endmacro %}
+  {% macro select_cls() %}mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:bg-white dark:focus:bg-slate-900{% endmacro %}
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+  <div class="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
     <label class="text-xs text-brand-muted dark:text-slate-400 block">
       {{ t('dashboard.province') }}
       <select id="filter-province" class="{{ select_cls() }}">
@@ -107,35 +145,50 @@
     </label>
   </div>
 
-  <div class="mt-4 flex justify-end">
+  <div class="relative mt-4 flex justify-end">
     <button type="button" id="filter-apply"
-            class="px-4 py-2 rounded-xl bg-brand text-white text-sm font-medium hover:bg-teal-700 shadow-sm shadow-teal-900/20 transition active:scale-[0.98]">
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand text-white text-sm font-medium hover:bg-teal-700 shadow-md shadow-teal-900/15 transition active:scale-[0.98]">
+      <i data-lucide="filter" class="w-4 h-4"></i>
       {{ t('dashboard.apply') }}
     </button>
   </div>
 </section>
 
-<section class="ui-card p-4 md:p-5 animate-fade-up" style="animation-delay:120ms">
-  <h2 class="font-semibold text-brand-dark dark:text-slate-100 mb-3">{{ t('dashboard.reports') }}</h2>
-  <div class="flex flex-wrap gap-2 mb-5">
+<section class="ui-card relative overflow-hidden p-4 md:p-5 animate-fade-up" style="animation-delay:120ms">
+  <div class="pointer-events-none absolute -bottom-10 -end-8 w-36 h-36 rounded-full bg-amber-100/50 dark:bg-amber-900/20"></div>
+  <div class="pointer-events-none absolute top-8 end-20 w-10 h-10 rounded-full border-2 border-dashed border-teal-200 dark:border-teal-800"></div>
+
+  <div class="relative flex items-center gap-2.5 mb-4">
+    <div class="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 grid place-items-center">
+      <i data-lucide="pie-chart" class="w-4 h-4"></i>
+    </div>
+    <h2 class="font-semibold text-brand-dark dark:text-slate-100">{{ t('dashboard.reports') }}</h2>
+  </div>
+
+  <div class="relative flex flex-wrap gap-2 mb-5">
+    {% set report_tones = ['teal', 'amber', 'sky', 'orange', 'emerald', 'cyan'] %}
     {% for report in report_catalog %}
     <button type="button"
-            class="report-btn px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-brand-dark dark:text-slate-100 text-sm hover:border-brand hover:shadow-sm transition"
+            class="report-btn report-pill tone-{{ report_tones[loop.index0 % 6] }}"
             data-report="{{ report.key }}"
             title="{{ report.description }}">
+      <span class="report-dot"></span>
       {{ report.label }}
     </button>
     {% endfor %}
   </div>
 
-  <div id="report-meta" class="mb-4">
+  <div id="report-meta" class="relative mb-4 rounded-2xl bg-slate-50/80 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 px-4 py-3">
     <h3 id="report-title" class="font-semibold text-brand-dark dark:text-slate-100 text-lg">{{ t('dashboard.pick_report') }}</h3>
     <p id="report-description" class="text-sm text-brand-muted dark:text-slate-400 mt-1"></p>
   </div>
 
   <div id="report-summary" class="hidden grid grid-cols-2 md:grid-cols-5 gap-3 mb-5"></div>
 
-  <div id="report-loading" class="hidden py-16 text-center text-brand-muted dark:text-slate-400 text-sm">{{ t('dashboard.loading') }}</div>
+  <div id="report-loading" class="hidden py-16 text-center text-brand-muted dark:text-slate-400 text-sm">
+    <div class="mx-auto mb-3 w-10 h-10 rounded-full border-2 border-teal-200 border-t-brand animate-spin"></div>
+    {{ t('dashboard.loading') }}
+  </div>
   <div id="report-empty" class="hidden py-10 text-center text-brand-muted dark:text-slate-400 text-sm">{{ t('dashboard.pick_report') }}</div>
   <div id="report-charts" class="grid grid-cols-1 xl:grid-cols-2 gap-4"></div>
 </section>
@@ -146,4 +199,5 @@
   window.DASHBOARD_CITIES = {{ filter_options.cities|tojson }};
 </script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>lucide.createIcons();</script>
 {% endblock %}

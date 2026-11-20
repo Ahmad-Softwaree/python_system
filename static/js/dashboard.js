@@ -36,8 +36,7 @@
       const on = btn.dataset.report === key;
       btn.classList.toggle("bg-brand", on);
       btn.classList.toggle("text-white", on);
-      btn.classList.toggle("bg-white", !on);
-      btn.classList.toggle("text-brand-dark", !on);
+      btn.classList.toggle("shadow-md", on);
     });
   }
 
@@ -47,7 +46,7 @@
       const on = btn.dataset.preset === activePreset;
       btn.classList.toggle("bg-brand", on);
       btn.classList.toggle("text-white", on);
-      btn.classList.toggle("bg-white", !on);
+      btn.classList.toggle("shadow-sm", on);
     });
     // Preset overrides custom date inputs visually
     if (activePreset) {
@@ -106,14 +105,16 @@
           ["Revenue", summary.revenue],
           ["Avg days", summary.avg_delivery_days],
         ];
+    const tones = ["teal", "amber", "sky", "orange", "emerald", "cyan"];
     summaryEl.innerHTML = cards
-      .map(
-        ([label, value]) => `
-      <div class="ui-card px-3 py-3 animate-fade-up">
-        <div class="text-lg font-bold text-brand dark:text-teal-300">${value}</div>
-        <div class="text-[11px] text-brand-muted dark:text-slate-400 mt-0.5">${label}</div>
-      </div>`
-      )
+      .map(([label, value], i) => {
+        const tone = tones[i % tones.length];
+        return `
+      <div class="summary-chip tone-${tone}" style="animation-delay:${i * 40}ms">
+        <div class="relative text-lg font-bold">${value}</div>
+        <div class="relative text-[11px] mt-0.5 opacity-75">${label}</div>
+      </div>`;
+      })
       .join("");
     summaryEl.classList.remove("hidden");
   }
@@ -127,12 +128,15 @@
     emptyEl.classList.add("hidden");
     charts.forEach((chart, i) => {
       const card = document.createElement("article");
-      card.className = "ui-card p-4 animate-fade-up";
+      card.className = "chart-card";
       card.style.animationDelay = `${i * 50}ms`;
       card.innerHTML = `
-        <h4 class="font-semibold text-brand-dark dark:text-slate-100">${chart.title}</h4>
-        <p class="text-xs text-brand-muted dark:text-slate-400 mb-3">${chart.lecture || ""}</p>
-        <img src="data:image/png;base64,${chart.image}" alt="${chart.title}" class="w-full rounded-xl bg-white dark:bg-slate-950" />
+        <div class="relative flex items-start justify-between gap-2 mb-1">
+          <h4 class="font-semibold text-brand-dark dark:text-slate-100">${chart.title}</h4>
+          <span class="shrink-0 w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-950 text-brand dark:text-teal-300 grid place-items-center text-xs font-bold">${i + 1}</span>
+        </div>
+        <p class="relative text-xs text-brand-muted dark:text-slate-400 mb-3">${chart.lecture || ""}</p>
+        <img src="data:image/png;base64,${chart.image}" alt="${chart.title}" class="relative w-full rounded-xl bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800" />
       `;
       chartsEl.appendChild(card);
     });
