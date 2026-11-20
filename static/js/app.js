@@ -1,28 +1,26 @@
 /**
- * Collapsible sidebar.
- *
- * Bug fix: previously we toggled two icon elements and inferred state from
- * the `w-16` class. Lucide replaces <i> with <svg>, and overflow:hidden could
- * clip the expand button — so collapse could not be undone.
- *
- * Now we:
- * - store state in data-collapsed + localStorage
- * - keep one toggle button always visible
- * - swap the Lucide icon name when expanding/collapsing
+ * Sidebar collapse (desktop) + mobile drawer + theme localStorage sync.
  */
 (function () {
   const sidebar = document.getElementById("sidebar");
   const toggle = document.getElementById("sidebar-toggle");
-  if (!sidebar || !toggle) return;
+  const openMobile = document.getElementById("sidebar-open-mobile");
+  const closeMobile = document.getElementById("sidebar-close-mobile");
+  const backdrop = document.getElementById("sidebar-backdrop");
+  if (!sidebar) return;
 
   const KEY = "postal-sidebar-collapsed";
+
+  function isDesktop() {
+    return window.matchMedia("(min-width: 768px)").matches;
+  }
 
   function isCollapsed() {
     return sidebar.getAttribute("data-collapsed") === "1";
   }
 
   function setIcon(collapsed) {
-    // Remove any previous svg Lucide injected, then put a fresh <i> back.
+    if (!toggle) return;
     toggle.innerHTML = "";
     const icon = document.createElement("i");
     icon.setAttribute("data-lucide", collapsed ? "panel-left-open" : "panel-left-close");
@@ -31,30 +29,69 @@
     if (window.lucide) lucide.createIcons({ nodes: [toggle] });
   }
 
-  function apply(collapsed) {
+  function applyDesktop(collapsed) {
+    if (!isDesktop()) return;
     sidebar.setAttribute("data-collapsed", collapsed ? "1" : "0");
     sidebar.classList.toggle("w-60", !collapsed);
     sidebar.classList.toggle("w-16", collapsed);
-
     document.querySelectorAll(".sidebar-label").forEach((el) => {
       el.classList.toggle("hidden", collapsed);
     });
-
-    // When collapsed, hide the brand tile so the toggle button has room.
     const brand = sidebar.querySelector(".sidebar-brand");
     if (brand) brand.classList.toggle("hidden", collapsed);
-
+    const prefs = sidebar.querySelector(".sidebar-prefs");
+    if (prefs && collapsed) {
+      // Keep compact icon-ish prefs readable: hide text labels only (already .sidebar-label)
+    }
     setIcon(collapsed);
-    toggle.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+    if (toggle) toggle.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
   }
 
-  apply(localStorage.getItem(KEY) === "1");
+  function openDrawer() {
+    sidebar.classList.add("mobile-open");
+    if (backdrop) backdrop.classList.add("show");
+    document.body.style.overflow = "hidden";
+  }
 
-  toggle.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const next = !isCollapsed();
-    localStorage.setItem(KEY, next ? "1" : "0");
-    apply(next);
+  function closeDrawer() {
+    sidebar.classList.remove("mobile-open");
+    if (backdrop) backdrop.classList.remove("show");
+    document.body.style.overflow = "";
+  }
+
+  // Desktop collapse restore
+  applyDesktop(localStorage.getItem(KEY) === "1");
+
+  if (toggle) {
+    toggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const next = !isCollapsed();
+      localStorage.setItem(KEY, next ? "1" : "0");
+      applyDesktop(next);
+    });
+  }
+
+  if (openMobile) openMobile.addEventListener("click", openDrawer);
+  if (closeMobile) closeMobile.addEventListener("click", closeDrawer);
+  if (backdrop) backdrop.addEventListener("click", closeDrawer);
+
+  window.addEventListener("resize", () => {
+    if (isDesktop()) {
+      closeDrawer();
+      applyDesktop(localStorage.getItem(KEY) === "1");
+    } else {
+      sidebar.classList.add("w-60");
+      sidebar.classList.remove("w-16");
+      document.querySelectorAll(".sidebar-label").forEach((el) => el.classList.remove("hidden"));
+      const brand = sidebar.querySelector(".sidebar-brand");
+      if (brand) brand.classList.remove("hidden");
+    }
   });
+
+  // Sync theme cookie → localStorage for the early FOUC script
+  try {
+    const m = document.cookie.match(/(?:^|; )postal_theme=([^;]*)/);
+    if (m) localStorage.setItem("postal-theme", decodeURIComponent(m[1]));
+  } catch (e) {}
 })();

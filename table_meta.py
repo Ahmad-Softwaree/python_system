@@ -4,7 +4,7 @@ Registry for generic table UI + relation combobox sources.
 Field types:
   text | number | float | bool | date | relation
 
-relation fields use a searchable combobox (type-to-filter, then select).
+Multilang fields use name_en / name_ar / name_ckb (etc.).
 """
 
 from models import (
@@ -23,23 +23,36 @@ from models import (
     Street,
 )
 
+
+def trilang_fields(base, label_en, required=True):
+    """Form fields for EN / AR / CKB of one logical column."""
+    return [
+        {"name": f"{base}_en", "label": f"{label_en} (EN)", "type": "text", "required": required, "i18n": f"field.{base}_en"},
+        {"name": f"{base}_ar", "label": f"{label_en} (AR)", "type": "text", "required": required, "i18n": f"field.{base}_ar"},
+        {"name": f"{base}_ckb", "label": f"{label_en} (CKB)", "type": "text", "required": required, "i18n": f"field.{base}_ckb"},
+    ]
+
+
+def trilang_search(base):
+    return [f"{base}_en", f"{base}_ar", f"{base}_ckb"]
+
+
 TABLES = {
     "roles": {
         "title": "Roles",
+        "title_key": "table.roles",
         "model": Role,
         "view_columns": [
             {"key": "id", "label": "ID"},
             {"key": "name", "label": "Name"},
             {"key": "description", "label": "Description"},
         ],
-        "search": ["name", "description"],
-        "fields": [
-            {"name": "name", "label": "Name", "type": "text", "required": True},
-            {"name": "description", "label": "Description", "type": "text", "required": True},
-        ],
+        "search": trilang_search("name") + trilang_search("description"),
+        "fields": trilang_fields("name", "Name") + trilang_fields("description", "Description"),
     },
     "provinces": {
         "title": "Provinces",
+        "title_key": "table.provinces",
         "model": Province,
         "view_columns": [
             {"key": "id", "label": "ID"},
@@ -47,15 +60,16 @@ TABLES = {
             {"key": "code", "label": "Code"},
             {"key": "population", "label": "Population"},
         ],
-        "search": ["name", "code"],
-        "fields": [
-            {"name": "name", "label": "Name", "type": "text", "required": True},
+        "search": trilang_search("name") + ["code"],
+        "fields": trilang_fields("name", "Name")
+        + [
             {"name": "code", "label": "Code", "type": "text", "required": True},
             {"name": "population", "label": "Population", "type": "number", "required": True},
         ],
     },
     "cities": {
         "title": "Cities",
+        "title_key": "table.cities",
         "model": City,
         "view_columns": [
             {"key": "id", "label": "ID"},
@@ -63,15 +77,16 @@ TABLES = {
             {"key": "province_name", "label": "Province"},
             {"key": "population", "label": "Population"},
         ],
-        "search": ["name"],
-        "fields": [
-            {"name": "name", "label": "Name", "type": "text", "required": True},
+        "search": trilang_search("name"),
+        "fields": trilang_fields("name", "Name")
+        + [
             {"name": "province_id", "label": "Province", "type": "relation", "source": "provinces", "required": True},
             {"name": "population", "label": "Population", "type": "number", "required": True},
         ],
     },
     "streets": {
         "title": "Streets",
+        "title_key": "table.streets",
         "model": Street,
         "view_columns": [
             {"key": "id", "label": "ID"},
@@ -79,15 +94,16 @@ TABLES = {
             {"key": "city_name", "label": "City"},
             {"key": "postal_code", "label": "Postal Code"},
         ],
-        "search": ["name", "postal_code"],
-        "fields": [
-            {"name": "name", "label": "Name", "type": "text", "required": True},
+        "search": trilang_search("name") + ["postal_code"],
+        "fields": trilang_fields("name", "Name")
+        + [
             {"name": "city_id", "label": "City", "type": "relation", "source": "cities", "required": True},
             {"name": "postal_code", "label": "Postal Code", "type": "text", "required": True},
         ],
     },
     "posts": {
         "title": "Post Offices",
+        "title_key": "table.posts",
         "model": Post,
         "view_columns": [
             {"key": "id", "label": "ID"},
@@ -97,9 +113,9 @@ TABLES = {
             {"key": "capacity", "label": "Capacity"},
             {"key": "staff_count", "label": "Staff"},
         ],
-        "search": ["name"],
-        "fields": [
-            {"name": "name", "label": "Name", "type": "text", "required": True},
+        "search": trilang_search("name"),
+        "fields": trilang_fields("name", "Name")
+        + [
             {"name": "city_id", "label": "City", "type": "relation", "source": "cities", "required": True},
             {"name": "street_id", "label": "Street", "type": "relation", "source": "streets", "required": True},
             {"name": "capacity", "label": "Capacity", "type": "number", "required": True},
@@ -108,6 +124,7 @@ TABLES = {
     },
     "drivers": {
         "title": "Drivers",
+        "title_key": "table.drivers",
         "model": Driver,
         "view_columns": [
             {"key": "id", "label": "ID"},
@@ -118,11 +135,13 @@ TABLES = {
             {"key": "rating", "label": "Rating"},
             {"key": "years_experience", "label": "Years Exp."},
         ],
-        "search": ["name", "phone", "vehicle_type"],
-        "fields": [
-            {"name": "name", "label": "Name", "type": "text", "required": True},
+        "search": trilang_search("name") + ["phone"] + trilang_search("vehicle_type"),
+        "fields": trilang_fields("name", "Name")
+        + [
             {"name": "phone", "label": "Phone", "type": "text", "required": True},
-            {"name": "vehicle_type", "label": "Vehicle Type", "type": "text", "required": True},
+        ]
+        + trilang_fields("vehicle_type", "Vehicle Type")
+        + [
             {"name": "deliveries", "label": "Deliveries", "type": "number", "required": True},
             {"name": "rating", "label": "Rating", "type": "float", "required": True},
             {"name": "years_experience", "label": "Years Experience", "type": "number", "required": True},
@@ -130,6 +149,7 @@ TABLES = {
     },
     "merchants": {
         "title": "Merchants",
+        "title_key": "table.merchants",
         "model": Merchant,
         "view_columns": [
             {"key": "id", "label": "ID"},
@@ -139,9 +159,9 @@ TABLES = {
             {"key": "total_orders", "label": "Orders"},
             {"key": "revenue_iqd", "label": "Revenue"},
         ],
-        "search": ["name", "phone"],
-        "fields": [
-            {"name": "name", "label": "Name", "type": "text", "required": True},
+        "search": trilang_search("name") + ["phone"],
+        "fields": trilang_fields("name", "Name")
+        + [
             {"name": "city_id", "label": "City", "type": "relation", "source": "cities", "required": True},
             {"name": "phone", "label": "Phone", "type": "text", "required": True},
             {"name": "total_orders", "label": "Total Orders", "type": "number", "required": True},
@@ -150,6 +170,7 @@ TABLES = {
     },
     "admins": {
         "title": "Admins",
+        "title_key": "table.admins",
         "model": Admin,
         "view_columns": [
             {"key": "id", "label": "ID"},
@@ -158,9 +179,9 @@ TABLES = {
             {"key": "role_name", "label": "Role"},
             {"key": "active", "label": "Active"},
         ],
-        "search": ["name", "email"],
-        "fields": [
-            {"name": "name", "label": "Name", "type": "text", "required": True},
+        "search": trilang_search("name") + ["email"],
+        "fields": trilang_fields("name", "Name")
+        + [
             {"name": "email", "label": "Email", "type": "text", "required": True},
             {"name": "role_id", "label": "Role", "type": "relation", "source": "roles", "required": True},
             {"name": "active", "label": "Active", "type": "bool", "required": False},
@@ -168,20 +189,19 @@ TABLES = {
     },
     "item_types": {
         "title": "Item Types",
+        "title_key": "table.item_types",
         "model": ItemType,
         "view_columns": [
             {"key": "id", "label": "ID"},
             {"key": "name", "label": "Name"},
             {"key": "description", "label": "Description"},
         ],
-        "search": ["name", "description"],
-        "fields": [
-            {"name": "name", "label": "Name", "type": "text", "required": True},
-            {"name": "description", "label": "Description", "type": "text", "required": True},
-        ],
+        "search": trilang_search("name") + trilang_search("description"),
+        "fields": trilang_fields("name", "Name") + trilang_fields("description", "Description"),
     },
     "items": {
         "title": "Items",
+        "title_key": "table.items",
         "model": Item,
         "view_columns": [
             {"key": "id", "label": "ID"},
@@ -191,10 +211,10 @@ TABLES = {
             {"key": "price_iqd", "label": "Price"},
             {"key": "stock", "label": "Stock"},
         ],
-        "search": ["name"],
-        "row_link": "stock_history",  # clicking a row opens stock history
-        "fields": [
-            {"name": "name", "label": "Name", "type": "text", "required": True},
+        "search": trilang_search("name"),
+        "row_link": "stock_history",
+        "fields": trilang_fields("name", "Name")
+        + [
             {"name": "item_type_id", "label": "Item Type", "type": "relation", "source": "item_types", "required": True},
             {"name": "merchant_id", "label": "Merchant", "type": "relation", "source": "merchants", "required": True},
             {"name": "price", "label": "Price (IQD)", "type": "float", "required": True},
@@ -203,6 +223,7 @@ TABLES = {
     },
     "orders": {
         "title": "Orders",
+        "title_key": "table.orders",
         "model": Order,
         "special": "orders",
         "view_columns": [
@@ -231,6 +252,7 @@ TABLES = {
     },
     "ratings": {
         "title": "Ratings",
+        "title_key": "table.ratings",
         "model": Rating,
         "view_columns": [
             {"key": "id", "label": "ID"},
@@ -239,15 +261,16 @@ TABLES = {
             {"key": "comment", "label": "Comment"},
             {"key": "created_at", "label": "Created"},
         ],
-        "search": ["comment"],
+        "search": trilang_search("comment"),
         "fields": [
             {"name": "item_id", "label": "Item", "type": "relation", "source": "items", "required": True},
             {"name": "score", "label": "Score (1-5)", "type": "number", "required": True},
-            {"name": "comment", "label": "Comment", "type": "text", "required": False},
-        ],
+        ]
+        + trilang_fields("comment", "Comment", required=False),
     },
     "feedbacks": {
         "title": "Feedback",
+        "title_key": "table.feedbacks",
         "model": Feedback,
         "view_columns": [
             {"key": "id", "label": "ID"},
@@ -255,27 +278,29 @@ TABLES = {
             {"key": "body", "label": "Body"},
             {"key": "created_at", "label": "Created"},
         ],
-        "search": ["title", "body"],
-        "fields": [
-            {"name": "title", "label": "Title", "type": "text", "required": True},
-            {"name": "body", "label": "Body", "type": "text", "required": True},
-        ],
+        "search": trilang_search("title") + trilang_search("body"),
+        "fields": trilang_fields("title", "Title") + trilang_fields("body", "Body"),
     },
 }
 
-# Used by /api/options/<source>
+# Combobox sources — label column is resolved live via localized()
 OPTION_SOURCES = {
-    "roles": (Role, "name"),
-    "provinces": (Province, "name"),
-    "cities": (City, "name"),
-    "streets": (Street, "name"),
-    "posts": (Post, "name"),
-    "drivers": (Driver, "name"),
-    "merchants": (Merchant, "name"),
-    "item_types": (ItemType, "name"),
-    "items": (Item, "name"),
+    "roles": Role,
+    "provinces": Province,
+    "cities": City,
+    "streets": Street,
+    "posts": Post,
+    "drivers": Driver,
+    "merchants": Merchant,
+    "item_types": ItemType,
+    "items": Item,
 }
 
 
 def nav_tables():
-    return {key: {"title": meta["title"]} for key, meta in TABLES.items()}
+    from i18n import t
+
+    return {
+        key: {"title": t(meta.get("title_key", f"table.{key}")), "title_key": meta.get("title_key")}
+        for key, meta in TABLES.items()
+    }

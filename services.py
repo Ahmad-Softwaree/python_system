@@ -8,6 +8,7 @@ from urllib.parse import urlencode
 from sqlalchemy import String, cast, or_
 
 from extensions import db
+from i18n import localized
 from models import Item, OrderItem, StockHistory, ORDER_STATUSES
 from table_meta import TABLES
 
@@ -106,35 +107,35 @@ def enrich_row(table_name, obj):
     d["_raw"] = obj.to_dict()  # for edit forms (ids still needed)
 
     if table_name == "cities":
-        d["province_name"] = obj.province.name if obj.province else "—"
+        d["province_name"] = localized(obj.province) if obj.province else "—"
     elif table_name == "streets":
-        d["city_name"] = obj.city.name if obj.city else "—"
+        d["city_name"] = localized(obj.city) if obj.city else "—"
     elif table_name == "posts":
-        d["city_name"] = obj.city.name if obj.city else "—"
-        d["street_name"] = obj.street.name if obj.street else "—"
+        d["city_name"] = localized(obj.city) if obj.city else "—"
+        d["street_name"] = localized(obj.street) if obj.street else "—"
     elif table_name == "merchants":
-        d["city_name"] = obj.city.name if obj.city else "—"
+        d["city_name"] = localized(obj.city) if obj.city else "—"
         d["revenue_iqd"] = format_iqd(obj.revenue)
     elif table_name == "admins":
-        d["role_name"] = obj.role_rel.name if obj.role_rel else "—"
+        d["role_name"] = localized(obj.role_rel) if obj.role_rel else "—"
     elif table_name == "items":
-        d["item_type_name"] = obj.item_type.name if obj.item_type else "—"
-        d["merchant_name"] = obj.merchant.name if obj.merchant else "—"
+        d["item_type_name"] = localized(obj.item_type) if obj.item_type else "—"
+        d["merchant_name"] = localized(obj.merchant) if obj.merchant else "—"
         d["price_iqd"] = format_iqd(obj.price)
     elif table_name == "orders":
-        d["merchant_name"] = obj.merchant.name if obj.merchant else "—"
-        d["driver_name"] = obj.driver.name if obj.driver else "—"
-        d["post_name"] = obj.post.name if obj.post else "—"
-        d["city_name"] = obj.city.name if obj.city else "—"
-        d["street_name"] = obj.street.name if obj.street else "—"
+        d["merchant_name"] = localized(obj.merchant) if obj.merchant else "—"
+        d["driver_name"] = localized(obj.driver) if obj.driver else "—"
+        d["post_name"] = localized(obj.post) if obj.post else "—"
+        d["city_name"] = localized(obj.city) if obj.city else "—"
+        d["street_name"] = localized(obj.street) if obj.street else "—"
         parts = []
         for oi in obj.items or []:
-            name = oi.item.name if oi.item else f"#{oi.item_id}"
+            name = localized(oi.item) if oi.item else f"#{oi.item_id}"
             parts.append(f"{name} ×{oi.quantity}")
         d["items_summary"] = ", ".join(parts) if parts else "—"
         d["total_price_iqd"] = format_iqd(obj.total_price)
     elif table_name == "ratings":
-        d["item_name"] = obj.item.name if obj.item else "—"
+        d["item_name"] = localized(obj.item) if obj.item else "—"
 
     if "deleted_at" in d and d["deleted_at"]:
         pass
@@ -149,7 +150,7 @@ def adjust_stock(item, change_qty, reason, order_id=None, note=""):
     before = item.stock
     after = before + change_qty
     if after < 0:
-        raise ValueError(f"Not enough stock for '{item.name}' (have {before}, need {-change_qty})")
+        raise ValueError(f"Not enough stock for '{localized(item)}' (have {before}, need {-change_qty})")
     item.stock = after
     db.session.add(
         StockHistory(

@@ -109,9 +109,9 @@
     summaryEl.innerHTML = cards
       .map(
         ([label, value]) => `
-      <div class="rounded-xl border border-slate-200 bg-brand-soft/40 px-3 py-3">
-        <div class="text-lg font-bold text-brand">${value}</div>
-        <div class="text-[11px] text-brand-muted mt-0.5">${label}</div>
+      <div class="ui-card px-3 py-3 animate-fade-up">
+        <div class="text-lg font-bold text-brand dark:text-teal-300">${value}</div>
+        <div class="text-[11px] text-brand-muted dark:text-slate-400 mt-0.5">${label}</div>
       </div>`
       )
       .join("");
@@ -125,13 +125,14 @@
       return;
     }
     emptyEl.classList.add("hidden");
-    charts.forEach((chart) => {
+    charts.forEach((chart, i) => {
       const card = document.createElement("article");
-      card.className = "bg-slate-50 border border-slate-200 rounded-xl p-4";
+      card.className = "ui-card p-4 animate-fade-up";
+      card.style.animationDelay = `${i * 50}ms`;
       card.innerHTML = `
-        <h4 class="font-semibold text-brand-dark">${chart.title}</h4>
-        <p class="text-xs text-brand-muted mb-3">${chart.lecture || ""}</p>
-        <img src="data:image/png;base64,${chart.image}" alt="${chart.title}" class="w-full rounded-lg bg-white" />
+        <h4 class="font-semibold text-brand-dark dark:text-slate-100">${chart.title}</h4>
+        <p class="text-xs text-brand-muted dark:text-slate-400 mb-3">${chart.lecture || ""}</p>
+        <img src="data:image/png;base64,${chart.image}" alt="${chart.title}" class="w-full rounded-xl bg-white dark:bg-slate-950" />
       `;
       chartsEl.appendChild(card);
     });

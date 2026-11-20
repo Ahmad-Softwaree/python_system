@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ t('settings.title') }} — {{ t('app.name') }}{% endblock %}
+
+{% block content %}
+<header class="mb-6 animate-fade-up">
+  <h1 class="text-2xl sm:text-3xl font-bold text-brand-dark dark:text-teal-300 tracking-tight">{{ t('settings.title') }}</h1>
+  <p class="text-brand-muted dark:text-slate-400 text-sm mt-1">{{ t('settings.subtitle') }}</p>
+</header>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
+  <section class="ui-card p-5 md:p-6 animate-fade-up" style="animation-delay:40ms">
+    <div class="flex items-start gap-3 mb-4">
+      <div class="w-10 h-10 rounded-xl bg-brand-soft dark:bg-teal-950 grid place-items-center text-brand dark:text-teal-300">
+        <i data-lucide="palette" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h2 class="font-semibold text-brand-dark dark:text-slate-100">{{ t('settings.theme') }}</h2>
+        <p class="text-xs text-brand-muted dark:text-slate-400 mt-0.5">{{ t('settings.theme_hint') }}</p>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <a href="{{ url_for('settings_theme', theme='light', next=url_for('settings_page')) }}"
+         class="group rounded-2xl border-2 p-4 text-center transition
+                {% if theme == 'light' %}border-brand bg-brand-soft/60 dark:bg-teal-950{% else %}border-slate-200 dark:border-slate-700 hover:border-brand/50{% endif %}">
+        <div class="mx-auto mb-3 w-full h-16 rounded-xl bg-gradient-to-br from-slate-50 to-slate-200 border border-slate-200"></div>
+        <div class="inline-flex items-center gap-2 text-sm font-medium">
+          <i data-lucide="sun" class="w-4 h-4"></i> {{ t('theme.light') }}
+        </div>
+      </a>
+      <a href="{{ url_for('settings_theme', theme='dark', next=url_for('settings_page')) }}"
+         class="group rounded-2xl border-2 p-4 text-center transition
+                {% if theme == 'dark' %}border-brand bg-brand-soft/60 dark:bg-teal-950{% else %}border-slate-200 dark:border-slate-700 hover:border-brand/50{% endif %}">
+        <div class="mx-auto mb-3 w-full h-16 rounded-xl bg-gradient-to-br from-slate-800 to-slate-950 border border-slate-700"></div>
+        <div class="inline-flex items-center gap-2 text-sm font-medium">
+          <i data-lucide="moon" class="w-4 h-4"></i> {{ t('theme.dark') }}
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section class="ui-card p-5 md:p-6 animate-fade-up" style="animation-delay:90ms">
+    <div class="flex items-start gap-3 mb-4">
+      <div class="w-10 h-10 rounded-xl bg-brand-soft dark:bg-teal-950 grid place-items-center text-brand dark:text-teal-300">
+        <i data-lucide="languages" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h2 class="font-semibold text-brand-dark dark:text-slate-100">{{ t('settings.language') }}</h2>
+        <p class="text-xs text-brand-muted dark:text-slate-400 mt-0.5">{{ t('settings.language_hint') }}</p>
+      </div>
+    </div>
+    <div class="space-y-2">
+      {% for code, meta in langs.items() %}
+      <a href="{{ url_for('settings_lang', lang=code, next=url_for('settings_page')) }}"
+         class="flex items-center justify-between gap-3 rounded-2xl border-2 px-4 py-3 transition
+                {% if locale == code %}border-brand bg-brand-soft/60 dark:bg-teal-950{% else %}border-slate-200 dark:border-slate-700 hover:border-brand/50{% endif %}">
+        <div>
+          <div class="font-medium text-sm">{{ meta.native }}</div>
+          <div class="text-xs text-brand-muted dark:text-slate-400">{{ meta.label }} · {{ code|upper }} · {{ meta.dir|upper }}</div>
+        </div>
+        {% if locale == code %}
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-brand dark:text-teal-300"></i>
+        {% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

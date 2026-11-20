@@ -20,6 +20,7 @@ import seaborn as sns
 
 import pandas as pd
 
+from i18n import localized
 from models import City, Driver, Item, ItemType, Merchant, Order, OrderItem, Post, Province, Rating
 
 sns.set_theme(style="whitegrid", palette="viridis")
@@ -202,13 +203,13 @@ def build_orders_report(filters: dict):
     cities, _, merchants, drivers, *_ = _lookups()
     summary = _summary(orders)
 
-    by_city = Counter(cities.get(o.city_id).name if cities.get(o.city_id) else f"#{o.city_id}" for o in orders)
+    by_city = Counter(localized(cities[o.city_id]) if cities.get(o.city_id) else f"#{o.city_id}" for o in orders)
     by_merchant = Counter(
-        merchants.get(o.merchant_id).name if merchants.get(o.merchant_id) else f"#{o.merchant_id}"
+        localized(merchants[o.merchant_id]) if merchants.get(o.merchant_id) else f"#{o.merchant_id}"
         for o in orders
     )
     by_driver = Counter(
-        drivers.get(o.driver_id).name if drivers.get(o.driver_id) else f"#{o.driver_id}"
+        localized(drivers[o.driver_id]) if drivers.get(o.driver_id) else f"#{o.driver_id}"
         for o in orders
     )
     by_status = Counter(o.status for o in orders)
@@ -290,11 +291,11 @@ def build_revenue_report(filters: dict):
 
     for o in orders:
         city = cities.get(o.city_id)
-        prov_name = provinces.get(city.province_id).name if city and provinces.get(city.province_id) else "Unknown"
+        prov_name = localized(provinces[city.province_id]) if city and provinces.get(city.province_id) else "Unknown"
         by_province[prov_name] += o.total_price
-        by_city[city.name if city else f"#{o.city_id}"] += o.total_price
+        by_city[localized(city) if city else f"#{o.city_id}"] += o.total_price
         m = merchants.get(o.merchant_id)
-        by_merchant[m.name if m else f"#{o.merchant_id}"] += o.total_price
+        by_merchant[localized(m) if m else f"#{o.merchant_id}"] += o.total_price
         by_month[o.order_date.strftime("%Y-%m")] += o.total_price
 
     prov_items = sorted(by_province.items(), key=lambda x: x[1], reverse=True)
@@ -360,7 +361,7 @@ def build_delivery_report(filters: dict):
     days_by_city = defaultdict(list)
     for o in orders:
         if o.delivery_days > 0:
-            name = cities.get(o.city_id).name if cities.get(o.city_id) else f"#{o.city_id}"
+            name = localized(cities[o.city_id]) if cities.get(o.city_id) else f"#{o.city_id}"
             days_by_city[name].append(o.delivery_days)
 
     avg_items = sorted(
@@ -439,12 +440,12 @@ def build_inventory_report(filters: dict):
             qty_by_item[line.item_id] += line.quantity
             item = items.get(line.item_id)
             if item:
-                tname = item_types.get(item.item_type_id).name if item_types.get(item.item_type_id) else "Other"
+                tname = localized(item_types[item.item_type_id]) if item_types.get(item.item_type_id) else "Other"
                 revenue_by_type[tname] += line.line_total
 
     top_items = qty_by_item.most_common(12)
     item_labels = [
-        (items.get(i).name if items.get(i) else f"#{i}") for i, _ in top_items
+        (localized(items[i]) if items.get(i) else f"#{i}") for i, _ in top_items
     ]
     item_values = [v for _, v in top_items]
 
@@ -452,7 +453,7 @@ def build_inventory_report(filters: dict):
 
     # Current stock (live)
     stock_sorted = sorted(
-        [(i.name, i.stock) for i in items.values()],
+        [(localized(i), i.stock) for i in items.values()],
         key=lambda x: x[1],
     )[:12]  # lowest stock first — useful operationally
 
@@ -549,7 +550,7 @@ def build_ratings_report(filters: dict):
             "title": "Average Rating by Item (Horizontal Bar)",
             "lecture": "Highest-rated products first",
             "image": _bar(
-                [items.get(i).name if items.get(i) else f"#{i}" for i, _ in top],
+                [localized(items[i]) if items.get(i) else f"#{i}" for i, _ in top],
                 [v for _, v in top],
                 "Top Rated Items (Avg Stars)",
                 "Avg rating",
@@ -561,7 +562,7 @@ def build_ratings_report(filters: dict):
             "title": "Lowest Rated Items (Horizontal Bar)",
             "lecture": "Products that may need attention",
             "image": _bar(
-                [items.get(i).name if items.get(i) else f"#{i}" for i, _ in bottom],
+                [localized(items[i]) if items.get(i) else f"#{i}" for i, _ in bottom],
                 [v for _, v in bottom],
                 "Lowest Rated Items",
                 "Avg rating",
@@ -626,7 +627,7 @@ def build_correlations_report(filters: dict):
         scores = scores_by_item.get(item_id) or []
         rows.append(
             {
-                "item": item.name,
+                "item": localized(item),
                 "avg_rating": float(np.mean(scores)) if scores else np.nan,
                 "sell_price": float(item.price),
                 "quantity_sold": int(qty_by_item.get(item_id, 0)),

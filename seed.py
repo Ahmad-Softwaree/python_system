@@ -41,6 +41,7 @@ from data.admins import admins
 from data.item_types import item_types
 from data.items import items
 from data.feedbacks import feedbacks
+from i18n.db_names import expand_row
 
 # Reproducible “random” data every time you seed.
 RNG = random.Random(42)
@@ -182,13 +183,16 @@ def generate_ratings(count: int = 400):
         score = RNG.choices([1, 2, 3, 4, 5], weights=[5, 8, 18, 32, 37], k=1)[0]
         created = datetime.utcnow() - timedelta(days=RNG.randint(0, 400), hours=RNG.randint(0, 23))
         rows.append(
-            {
-                "id": i,
-                "item_id": item["id"],
-                "score": score,
-                "comment": RNG.choice(RATING_COMMENTS),
-                "created_at": created,
-            }
+            expand_row(
+                {
+                    "id": i,
+                    "item_id": item["id"],
+                    "score": score,
+                    "comment": RNG.choice(RATING_COMMENTS),
+                    "created_at": created,
+                },
+                ("comment",),
+            )
         )
     return rows
 
@@ -208,33 +212,43 @@ def seed():
         order_rows, order_item_rows, updated_items, updated_merchants, sold = generate_orders()
         rating_rows = generate_ratings(400)
 
-        db.session.bulk_insert_mappings(Role, roles)
-        db.session.bulk_insert_mappings(Province, provinces)
-        db.session.bulk_insert_mappings(City, cities)
-        db.session.bulk_insert_mappings(Street, streets)
-        db.session.bulk_insert_mappings(Post, posts)
-        db.session.bulk_insert_mappings(Driver, drivers)
-        db.session.bulk_insert_mappings(Merchant, updated_merchants)
-        db.session.bulk_insert_mappings(Admin, admins)
-        db.session.bulk_insert_mappings(ItemType, item_types)
-        db.session.bulk_insert_mappings(Item, updated_items)
+        role_rows = [expand_row(r, ("name", "description")) for r in roles]
+        province_rows = [expand_row(r, ("name",)) for r in provinces]
+        city_rows = [expand_row(r, ("name",)) for r in cities]
+        street_rows = [expand_row(r, ("name",)) for r in streets]
+        post_rows = [expand_row(r, ("name",)) for r in posts]
+        driver_rows = [expand_row(r, ("name", "vehicle_type")) for r in drivers]
+        merchant_rows = [expand_row(r, ("name",)) for r in updated_merchants]
+        admin_rows = [expand_row(r, ("name",)) for r in admins]
+        item_type_rows = [expand_row(r, ("name", "description")) for r in item_types]
+        item_rows = [expand_row(r, ("name",)) for r in updated_items]
+        feedback_rows = [
+            {
+                **expand_row(fb, ("title", "body")),
+                "created_at": datetime.utcnow() - timedelta(days=RNG.randint(0, 200)),
+            }
+            for fb in feedbacks
+        ]
+
+        db.session.bulk_insert_mappings(Role, role_rows)
+        db.session.bulk_insert_mappings(Province, province_rows)
+        db.session.bulk_insert_mappings(City, city_rows)
+        db.session.bulk_insert_mappings(Street, street_rows)
+        db.session.bulk_insert_mappings(Post, post_rows)
+        db.session.bulk_insert_mappings(Driver, driver_rows)
+        db.session.bulk_insert_mappings(Merchant, merchant_rows)
+        db.session.bulk_insert_mappings(Admin, admin_rows)
+        db.session.bulk_insert_mappings(ItemType, item_type_rows)
+        db.session.bulk_insert_mappings(Item, item_rows)
         db.session.bulk_insert_mappings(Order, order_rows)
         db.session.bulk_insert_mappings(OrderItem, order_item_rows)
         db.session.bulk_insert_mappings(Rating, rating_rows)
-        feedback_rows = []
-        for fb in feedbacks:
-            feedback_rows.append(
-                {
-                    **fb,
-                    "created_at": datetime.utcnow() - timedelta(days=RNG.randint(0, 200)),
-                }
-            )
         db.session.bulk_insert_mappings(Feedback, feedback_rows)
         db.session.commit()
 
         # Stock history: one sale row per non-cancelled line item
         history_rows = []
-        running = {i["id"]: i["stock"] + sold.get(i["id"], 0) for i in updated_items}
+        running = {i["id"]: i["stock"] + sold.get(i["id"], 0) for i in item_rows}
         for oi in order_item_rows:
             order = next(o for o in order_rows if o["id"] == oi["order_id"])
             if order["status"] == "Cancelled":

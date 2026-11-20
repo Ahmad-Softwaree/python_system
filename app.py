@@ -3,12 +3,13 @@ Postal System — Flask dashboard with MySQL ORM CRUD.
 Entry: python app.py  →  http://localhost:3000
 """
 
-from flask import Flask, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask import Flask, abort, flash, jsonify, make_response, redirect, render_template, request, session, url_for
 from sqlalchemy import or_
 
 from charts import build_report, get_report_catalog
 from config import Config
 from extensions import db
+from i18n import COOKIE_LANG, COOKIE_THEME, LANGS, THEMES, init_i18n, localized, t
 from models import (
     ORDER_STATUSES,
     City,
@@ -41,6 +42,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     db.init_app(app)
+    init_i18n(app)
 
     @app.context_processor
     def inject_globals():
@@ -52,6 +54,11 @@ def create_app():
 
     register_routes(app)
     return app
+
+
+def _set_pref_cookie(resp, key, value):
+    resp.set_cookie(key, value, max_age=60 * 60 * 24 * 365, samesite="Lax")
+    return resp
 
 
 def register_routes(app):
@@ -70,24 +77,24 @@ def register_routes(app):
         }
         filter_options = {
             "provinces": [
-                {"id": p.id, "name": p.name}
-                for p in Province.query.filter(Province.deleted_at.is_(None)).order_by(Province.name).all()
+                {"id": p.id, "name": localized(p)}
+                for p in Province.query.filter(Province.deleted_at.is_(None)).order_by(Province.name_en).all()
             ],
             "cities": [
-                {"id": c.id, "name": c.name, "province_id": c.province_id}
-                for c in City.query.filter(City.deleted_at.is_(None)).order_by(City.name).all()
+                {"id": c.id, "name": localized(c), "province_id": c.province_id}
+                for c in City.query.filter(City.deleted_at.is_(None)).order_by(City.name_en).all()
             ],
             "merchants": [
-                {"id": m.id, "name": m.name}
-                for m in Merchant.query.filter(Merchant.deleted_at.is_(None)).order_by(Merchant.name).all()
+                {"id": m.id, "name": localized(m)}
+                for m in Merchant.query.filter(Merchant.deleted_at.is_(None)).order_by(Merchant.name_en).all()
             ],
             "drivers": [
-                {"id": d.id, "name": d.name}
-                for d in Driver.query.filter(Driver.deleted_at.is_(None)).order_by(Driver.name).all()
+                {"id": d.id, "name": localized(d)}
+                for d in Driver.query.filter(Driver.deleted_at.is_(None)).order_by(Driver.name_en).all()
             ],
             "posts": [
-                {"id": p.id, "name": p.name}
-                for p in Post.query.filter(Post.deleted_at.is_(None)).order_by(Post.name).all()
+                {"id": p.id, "name": localized(p)}
+                for p in Post.query.filter(Post.deleted_at.is_(None)).order_by(Post.name_en).all()
             ],
             "statuses": ORDER_STATUSES,
         }
@@ -120,17 +127,46 @@ def register_routes(app):
 
     @app.route("/api/options/<source>")
     def api_options(source):
-        """Searchable combobox options: [{id, label}, ...]."""
+        """Searchable combobox options: [{id, label}, ...] — label follows active language."""
         if source not in OPTION_SOURCES:
             abort(404)
-        model, label_attr = OPTION_SOURCES[source]
+        model = OPTION_SOURCES[source]
         q = request.args.get("q", "").strip()
         query = model.query.filter(model.deleted_at.is_(None))
         if q:
-            column = getattr(model, label_attr)
-            query = query.filter(column.like(f"%{q}%"))
-        rows = query.order_by(getattr(model, label_attr).asc()).limit(30).all()
-        return jsonify([{"id": r.id, "label": getattr(r, label_attr)} for r in rows])
+            query = query.filter(
+                or_(
+                    model.name_en.like(f"%{q}%"),
+                    model.name_ar.like(f"%{q}%"),
+                    model.name_ckb.like(f"%{q}%"),
+                )
+            )
+        rows = query.order_by(model.name_en.asc()).limit(30).all()
+        return jsonify([{"id": r.id, "label": localized(r)} for r in rows])
+
+    @app.route("/settings", methods=["GET"])
+    def settings_page():
+        return render_template("settings.html", active="settings")
+
+    @app.route("/settings/lang/<lang>", methods=["POST", "GET"])
+    def settings_lang(lang):
+        if lang not in LANGS:
+            abort(404)
+        session["lang"] = lang
+        flash(t("settings.saved"), "success")
+        nxt = request.args.get("next") or request.referrer or url_for("settings_page")
+        resp = make_response(redirect(nxt))
+        return _set_pref_cookie(resp, COOKIE_LANG, lang)
+
+    @app.route("/settings/theme/<theme>", methods=["POST", "GET"])
+    def settings_theme(theme):
+        if theme not in THEMES:
+            abort(404)
+        session["theme"] = theme
+        flash(t("settings.saved"), "success")
+        nxt = request.args.get("next") or request.referrer or url_for("settings_page")
+        resp = make_response(redirect(nxt))
+        return _set_pref_cookie(resp, COOKIE_THEME, theme)
 
     def _table_list(name, deleted_mode):
         meta = TABLES.get(name)
@@ -171,7 +207,11 @@ def register_routes(app):
         return render_template(
             "table.html",
             table_name=name,
-            title=(f"Deleted — {meta['title']}" if deleted_mode else meta["title"]),
+            title=(
+                f"{t('nav.deleted')} — {t(meta.get('title_key', 'table.' + name))}"
+                if deleted_mode
+                else t(meta.get("title_key", "table." + name))
+            ),
             view_columns=view_columns,
             fields=meta["fields"],
             rows=rows,
