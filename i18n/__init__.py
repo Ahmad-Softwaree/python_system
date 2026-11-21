@@ -84,6 +84,10 @@ def resolve_prefs():
         theme = "light"
     g.locale = lang
     g.theme = theme
+    # Source-peek buttons (student teaching aid) — default on
+    from source_peek import resolve_show_source
+
+    resolve_show_source()
 
 
 def init_i18n(app):
@@ -93,6 +97,8 @@ def init_i18n(app):
 
     @app.context_processor
     def _inject_i18n():
+        from source_peek import show_source_enabled
+
         return {
             "t": t,
             "locale": get_locale(),
@@ -101,4 +107,5 @@ def init_i18n(app):
             "langs": LANG_META,
             "lang_codes": LANGS,
             "localized": localized,
+            "show_source": show_source_enabled(),
         }

@@ -10,6 +10,7 @@ from charts import build_report, get_report_catalog
 from config import Config
 from extensions import db
 from i18n import COOKIE_LANG, COOKIE_THEME, LANGS, THEMES, init_i18n, localized, t
+from source_peek import COOKIE_SHOW_SOURCE, get_source
 from models import (
     ORDER_STATUSES,
     City,
@@ -125,6 +126,14 @@ def register_routes(app):
             abort(404)
         return jsonify(report)
 
+    @app.route("/api/source/<path:key>")
+    def api_source(key):
+        """Return Python/JS source blocks for a dashboard UI piece (student peek)."""
+        data = get_source(key)
+        if data is None:
+            abort(404)
+        return jsonify(data)
+
     @app.route("/api/options/<source>")
     def api_options(source):
         """Searchable combobox options: [{id, label}, ...] — label follows active language."""
@@ -167,6 +176,16 @@ def register_routes(app):
         nxt = request.args.get("next") or request.referrer or url_for("settings_page")
         resp = make_response(redirect(nxt))
         return _set_pref_cookie(resp, COOKIE_THEME, theme)
+
+    @app.route("/settings/source/<state>", methods=["POST", "GET"])
+    def settings_source(state):
+        """Toggle educational </> source-peek buttons (on/off)."""
+        enabled = state in {"on", "1", "true", "yes"}
+        session["show_source"] = "1" if enabled else "0"
+        flash(t("settings.saved"), "success")
+        nxt = request.args.get("next") or request.referrer or url_for("settings_page")
+        resp = make_response(redirect(nxt))
+        return _set_pref_cookie(resp, COOKIE_SHOW_SOURCE, "1" if enabled else "0")
 
     def _table_list(name, deleted_mode):
         meta = TABLES.get(name)

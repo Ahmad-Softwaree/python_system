@@ -130,10 +130,20 @@
       const card = document.createElement("article");
       card.className = "chart-card";
       card.style.animationDelay = `${i * 50}ms`;
+      const sourceKey = chart.source_key || "";
+      const peekBtn =
+        window.SHOW_SOURCE && sourceKey && window.SourcePeek
+          ? window.SourcePeek.makeButton(sourceKey).outerHTML
+          : window.SHOW_SOURCE && sourceKey
+            ? `<button type="button" class="source-peek-btn" data-source-key="${sourceKey}" title="View source">&lt;/&gt;</button>`
+            : "";
       card.innerHTML = `
         <div class="relative flex items-start justify-between gap-2 mb-1">
           <h4 class="font-semibold text-brand-dark dark:text-slate-100">${chart.title}</h4>
-          <span class="shrink-0 w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-950 text-brand dark:text-teal-300 grid place-items-center text-xs font-bold">${i + 1}</span>
+          <div class="shrink-0 flex items-center gap-1.5">
+            ${peekBtn}
+            <span class="w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-950 text-brand dark:text-teal-300 grid place-items-center text-xs font-bold">${i + 1}</span>
+          </div>
         </div>
         <p class="relative text-xs text-brand-muted dark:text-slate-400 mb-3">${chart.lecture || ""}</p>
         <img src="data:image/png;base64,${chart.image}" alt="${chart.title}" class="relative w-full rounded-xl bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800" />
@@ -156,6 +166,25 @@
       const report = await res.json();
       titleEl.textContent = report.title;
       descEl.textContent = report.description || "";
+      // Optional </> next to report title (active report builder)
+      if (window.SHOW_SOURCE && report.source_key) {
+        let wrap = document.getElementById("report-title-peek");
+        if (!wrap) {
+          wrap = document.createElement("span");
+          wrap.id = "report-title-peek";
+          wrap.className = "inline-flex ms-2 align-middle";
+          titleEl.appendChild(wrap);
+        }
+        wrap.innerHTML = "";
+        const btn =
+          window.SourcePeek && window.SourcePeek.makeButton
+            ? window.SourcePeek.makeButton(report.source_key)
+            : null;
+        if (btn) wrap.appendChild(btn);
+        else {
+          wrap.innerHTML = `<button type="button" class="source-peek-btn" data-source-key="${report.source_key}">&lt;/&gt;</button>`;
+        }
+      }
       renderSummary(report.summary);
       renderCharts(report.charts || []);
     } catch (err) {

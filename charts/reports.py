@@ -801,4 +801,10 @@ def build_report(key: str, filters: dict | None = None):
     builder = REPORT_BUILDERS.get(key)
     if not builder:
         return None
-    return builder(filters or {})
+    report = builder(filters or {})
+    # Educational source-peek: which Python builder drew these charts
+    source_key = f"report.{key}"
+    report["source_key"] = source_key
+    for chart in report.get("charts") or []:
+        chart.setdefault("source_key", source_key)
+    return report
