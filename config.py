@@ -9,7 +9,10 @@ load_dotenv()
 class Config:
     """Flask / SQLAlchemy settings. Values come from .env when present."""
 
-    SECRET_KEY = os.getenv("SECRET_KEY", "postal-dev-secret")
+    # Use a long secret in .env (JWT HS256 recommends >= 32 bytes)
+    SECRET_KEY = os.getenv("SECRET_KEY", "postal-dev-secret-change-me-32chars!!")
+    # JWT access token lifetime (hours). Cookie `postal_jwt` uses the same window.
+    JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
     # How many rows each table page shows (Prev / Next pagination).
     PER_PAGE = int(os.getenv("PER_PAGE", "8"))
 

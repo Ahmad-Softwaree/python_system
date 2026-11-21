@@ -95,3 +95,20 @@
     if (m) localStorage.setItem("postal-theme", decodeURIComponent(m[1]));
   } catch (e) {}
 })();
+
+/**
+ * If any fetch gets 401 (expired/missing JWT), send the browser to /login.
+ */
+(function () {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async function (input, init) {
+    const res = await originalFetch(input, init);
+    if (res.status === 401) {
+      const path = window.location.pathname + window.location.search;
+      if (!path.startsWith("/login")) {
+        window.location.href = "/login?next=" + encodeURIComponent(path);
+      }
+    }
+    return res;
+  };
+})();

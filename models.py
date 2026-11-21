@@ -240,10 +240,22 @@ class Admin(SoftDeleteMixin, db.Model):
     name_ar = db.Column(db.String(120), nullable=False, default="")
     name_ckb = db.Column(db.String(120), nullable=False, default="")
     email = db.Column(db.String(120), nullable=False)
+    # Never store plaintext — use set_password() / auth.hash_password()
+    password_hash = db.Column(db.String(255), nullable=False, default="")
     role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=False)
     active = db.Column(db.Boolean, nullable=False, default=True)
 
     role_rel = db.relationship("Role", back_populates="admins")
+
+    def set_password(self, plain: str):
+        from auth import hash_password
+
+        self.password_hash = hash_password(plain)
+
+    def check_password(self, plain: str) -> bool:
+        from auth import verify_password
+
+        return verify_password(self.password_hash, plain)
 
     def to_dict(self):
         from i18n import localized
@@ -255,6 +267,7 @@ class Admin(SoftDeleteMixin, db.Model):
             "role_id": self.role_id,
             "active": self.active,
             "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None,
+            # password_hash intentionally omitted from API / tables
         }
         d.update(_trilang_dict(self, "name"))
         return d

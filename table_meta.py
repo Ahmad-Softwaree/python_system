@@ -198,6 +198,13 @@ TABLES = {
         "fields": trilang_fields("name", "name")
         + [
             field("email", "col.email", "text"),
+            {
+                "name": "password",
+                "label": "Password",
+                "type": "password",
+                "required": True,
+                "label_key": "col.password",
+            },
             field("role_id", "col.role", "relation", source="roles"),
             field("active", "col.active", "bool", required=False),
         ],

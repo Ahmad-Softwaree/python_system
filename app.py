@@ -6,6 +6,13 @@ Entry: python app.py  →  http://localhost:3000
 from flask import Flask, abort, flash, jsonify, make_response, redirect, render_template, request, session, url_for
 from sqlalchemy import or_
 
+from auth import (
+    clear_jwt_cookie,
+    create_access_token,
+    get_current_admin,
+    init_auth,
+    set_jwt_cookie,
+)
 from charts import build_report, get_report_catalog
 from config import Config
 from extensions import db
@@ -13,6 +20,7 @@ from i18n import COOKIE_LANG, COOKIE_THEME, LANGS, THEMES, init_i18n, localized,
 from source_peek import COOKIE_SHOW_SOURCE, get_source
 from models import (
     ORDER_STATUSES,
+    Admin,
     City,
     Driver,
     Item,
@@ -44,6 +52,7 @@ def create_app():
     app.config.from_object(Config)
     db.init_app(app)
     init_i18n(app)
+    init_auth(app)
 
     @app.context_processor
     def inject_globals():
@@ -63,6 +72,62 @@ def _set_pref_cookie(resp, key, value):
 
 
 def register_routes(app):
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if get_current_admin():
+            return redirect(url_for("dashboard"))
+
+        error = None
+        if request.method == "POST":
+            email = (request.form.get("email") or "").strip().lower()
+            password = request.form.get("password") or ""
+            admin = Admin.query.filter(
+                Admin.email == email,
+                Admin.deleted_at.is_(None),
+            ).first()
+            if not admin or not admin.active or not admin.check_password(password):
+                error = t("login.error")
+            else:
+                token = create_access_token(admin.id, admin.email)
+                nxt = request.args.get("next") or url_for("dashboard")
+                if not nxt.startswith("/"):
+                    nxt = url_for("dashboard")
+                resp = make_response(redirect(nxt))
+                set_jwt_cookie(resp, token)
+                flash(t("login.welcome", name=localized(admin)), "success")
+                return resp
+
+        return render_template("login.html", error=error, active="login")
+
+    @app.route("/logout", methods=["GET", "POST"])
+    def logout():
+        resp = make_response(redirect(url_for("login")))
+        clear_jwt_cookie(resp)
+        flash(t("login.logged_out"), "success")
+        return resp
+
+    @app.route("/api/login", methods=["POST"])
+    def api_login():
+        """JSON login — returns JWT (also sets httpOnly cookie)."""
+        data = request.get_json(silent=True) or {}
+        email = (data.get("email") or request.form.get("email") or "").strip().lower()
+        password = data.get("password") or request.form.get("password") or ""
+        admin = Admin.query.filter(
+            Admin.email == email,
+            Admin.deleted_at.is_(None),
+        ).first()
+        if not admin or not admin.active or not admin.check_password(password):
+            return jsonify({"error": "invalid_credentials", "message": t("login.error")}), 401
+        token = create_access_token(admin.id, admin.email)
+        body = {
+            "token": token,
+            "token_type": "Bearer",
+            "admin": {"id": admin.id, "email": admin.email, "name": localized(admin)},
+        }
+        resp = make_response(jsonify(body))
+        set_jwt_cookie(resp, token)
+        return resp
+
     @app.route("/")
     def dashboard():
         active_orders = Order.query.filter(Order.deleted_at.is_(None)).all()

@@ -98,5 +98,25 @@
       </a>
     </div>
   </section>
+
+  <section class="ui-card p-5 md:p-6 animate-fade-up lg:col-span-2" style="animation-delay:180ms">
+    <div class="flex items-start gap-3 mb-4">
+      <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/50 grid place-items-center text-red-600 dark:text-red-300">
+        <i data-lucide="log-out" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h2 class="font-semibold text-brand-dark dark:text-slate-100">{{ t('settings.logout') }}</h2>
+        <p class="text-xs text-brand-muted dark:text-slate-400 mt-0.5">{{ t('settings.logout_hint') }}</p>
+        {% if current_admin %}
+        <p class="text-xs mt-1 text-brand dark:text-teal-300">{{ localized(current_admin) }} · {{ current_admin.email }}</p>
+        {% endif %}
+      </div>
+    </div>
+    <a href="{{ url_for('logout') }}"
+       class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition">
+      <i data-lucide="log-out" class="w-4 h-4"></i>
+      {{ t('nav.logout') }}
+    </a>
+  </section>
 </div>
 {% endblock %}

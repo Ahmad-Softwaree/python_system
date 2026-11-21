@@ -37,11 +37,12 @@ from data.streets import streets
 from data.posts import posts
 from data.drivers import drivers
 from data.merchants import merchants
-from data.admins import admins
+from data.admins import DEFAULT_ADMIN_PASSWORD, admins
 from data.item_types import item_types
 from data.items import items
 from data.feedbacks import feedbacks
 from i18n.db_names import expand_row
+from auth import hash_password
 
 # Reproducible “random” data every time you seed.
 RNG = random.Random(42)
@@ -219,7 +220,13 @@ def seed():
         post_rows = [expand_row(r, ("name",)) for r in posts]
         driver_rows = [expand_row(r, ("name", "vehicle_type")) for r in drivers]
         merchant_rows = [expand_row(r, ("name",)) for r in updated_merchants]
-        admin_rows = [expand_row(r, ("name",)) for r in admins]
+        # Hash passwords before insert — never store plaintext in MySQL
+        admin_rows = []
+        for r in admins:
+            row = expand_row(r, ("name",))
+            plain = row.pop("password", None) or DEFAULT_ADMIN_PASSWORD
+            row["password_hash"] = hash_password(plain)
+            admin_rows.append(row)
         item_type_rows = [expand_row(r, ("name", "description")) for r in item_types]
         item_rows = [expand_row(r, ("name",)) for r in updated_items]
         feedback_rows = [
@@ -280,8 +287,10 @@ def seed():
             f"{len(order_item_rows)} order lines, "
             f"{len(history_rows)} stock-history rows, "
             f"{len(rating_rows)} ratings, "
-            f"{len(feedbacks)} feedbacks."
+            f"{len(feedbacks)} feedbacks, "
+            f"{len(admin_rows)} admins (passwords hashed)."
         )
+        print(f"Login demo: ahmed@postal.iq  /  {DEFAULT_ADMIN_PASSWORD}")
 
 
 if __name__ == "__main__":

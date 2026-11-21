@@ -48,11 +48,26 @@ def apply_form(instance, form, fields):
             continue
         if field["type"] == "bool":
             setattr(instance, name, name in form)
-        else:
-            value = parse_value(field, form.get(name, ""))
-            if value is None and field.get("required"):
-                raise ValueError(f"{field['label']} is required")
-            setattr(instance, name, value)
+            continue
+        if field["type"] == "password":
+            # Hash before save; empty on edit = keep existing hash
+            plain = (form.get(name) or "").strip()
+            is_new = getattr(instance, "id", None) is None
+            if not plain:
+                if is_new and field.get("required", True):
+                    raise ValueError(f"{field['label']} is required")
+                continue
+            if hasattr(instance, "set_password"):
+                instance.set_password(plain)
+            else:
+                from auth import hash_password
+
+                setattr(instance, "password_hash", hash_password(plain))
+            continue
+        value = parse_value(field, form.get(name, ""))
+        if value is None and field.get("required"):
+            raise ValueError(f"{field['label']} is required")
+        setattr(instance, name, value)
     return instance
 
 

@@ -181,6 +181,12 @@
         <input type="date" name="{{ field.name }}" id="field-{{ field.name }}"
                {% if field.required %}required{% endif %}
                class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40" />
+        {% elif field.type == 'password' %}
+        <input type="password" name="{{ field.name }}" id="field-{{ field.name }}"
+               autocomplete="new-password"
+               placeholder="{{ t('field.password_hint') }}"
+               class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40" />
+        <p class="text-[11px] text-brand-muted dark:text-slate-400 mt-1">{{ t('field.password_hint') }}</p>
         {% elif field.type in ['number', 'float'] %}
         <input type="number" step="{{ 'any' if field.type == 'float' else '1' }}" name="{{ field.name }}" id="field-{{ field.name }}"
                {% if field.required %}required{% endif %}
